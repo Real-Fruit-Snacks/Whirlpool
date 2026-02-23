@@ -1,0 +1,90 @@
+
+
+                            ▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+                    ▄▄▄▄▄▄▄             ▄▄▄▄▄▄▄▄
+             ▄▄▄▄▄▄▄      ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄
+         ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+         ▀▀▀▀▀         ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+
+         LinPEAS - Linux Privilege Escalation Awesome Script
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                             Basic information                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+OS: Linux version 5.4.0-42-generic (buildd@lgw01-amd64-038) (gcc version 9.3.0 (Ubuntu 9.3.0-10ubuntu2)) #46-Ubuntu SMP
+User & Groups: uid=1000(testuser) gid=1000(testuser) groups=1000(testuser),27(sudo),999(docker),998(lxd)
+Hostname: vulnerable-box
+Sudo version: Sudo version 1.8.31
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         Checking 'sudo -l'                                    ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+User testuser may run the following commands on vulnerable-box:
+    (ALL : ALL) NOPASSWD: /usr/bin/vim
+    (root) /usr/bin/find
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    SUID - Check easy privesc                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-rwsr-xr-x 1 root root 54256 Jul 21 2020 /usr/bin/passwd
+-rwsr-xr-x 1 root root 85064 Jul 14 2021 /usr/bin/sudo
+-rwsr-xr-x 1 root root 67816 Jul 21 2020 /usr/bin/su
+-rwsr-xr-x 1 root root 39144 Mar  7 2020 /usr/bin/find
+-rwsr-xr-x 1 root root 2342784 Jul 20 2021 /usr/bin/vim.basic
+-rwsr-xr-x 1 root root 163448 Jan 15 2021 /usr/bin/pkexec
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                            Capabilities                                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+/usr/bin/python3.8 = cap_setuid+ep
+/usr/bin/ping = cap_net_raw+ep
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          Cron jobs                                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+/etc/crontab:
+# m h dom mon dow user  command
+17 *    * * *   root    cd / && run-parts --report /etc/cron.hourly
+25 6    * * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily )
+* * * * *       root    /opt/scripts/backup.sh
+* * * * *       root    cleanup.sh
+
+/etc/cron.d/vulnerable_cron:
+* * * * *       root    tar -cf /tmp/backup.tar /home/*
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          NFS Exports                                          ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+/etc/exports:
+/shared *(rw,no_root_squash)
+/backup *(rw,sync)
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          Docker Information                                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+User is member of docker group!
+Docker socket writable: /var/run/docker.sock
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    Interesting Files - SGID                                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-rwxr-sr-x 1 root shadow 43032 Sep  5 2019 /usr/bin/ssh-agent
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                     Network Information                                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      1234/sshd
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      5678/apache2
+tcp6       0      0 :::3306                 :::*                    LISTEN      9012/mysqld
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    Writable files outside home                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+/opt/scripts/backup.sh is writable!
+/tmp is writable
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                     SSH Keys Found                                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+/home/testuser/.ssh/id_rsa
+/root/.ssh/authorized_keys (readable!)

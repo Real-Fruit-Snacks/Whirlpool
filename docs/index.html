@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whirlpool — Privilege Escalation Reasoning Engine</title>
+  <meta name="description" content="CLI privilege escalation reasoning engine. Parse LinPEAS, WinPEAS, and manual enumeration output into ranked, actionable exploitation playbooks with offline knowledge bases.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8C%80%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    /* =========================================================
+       WHIRLPOOL LANDING PAGE
+       Catppuccin Mocha palette — dark terminal aesthetic
+       ========================================================= */
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --ctp-rosewater: #f5e0dc;
+      --ctp-flamingo: #f2cdcd;
+      --ctp-pink: #f5c2e7;
+      --ctp-mauve: #cba6f7;
+      --ctp-red: #f38ba8;
+      --ctp-maroon: #eba0ac;
+      --ctp-peach: #fab387;
+      --ctp-yellow: #f9e2af;
+      --ctp-green: #a6e3a1;
+      --ctp-teal: #94e2d5;
+      --ctp-sky: #89dceb;
+      --ctp-sapphire: #74c7ec;
+      --ctp-blue: #89b4fa;
+      --ctp-lavender: #b4befe;
+      --ctp-text: #cdd6f4;
+      --ctp-subtext1: #bac2de;
+      --ctp-subtext0: #a6adc8;
+      --ctp-overlay2: #9399b2;
+      --ctp-overlay1: #7f849c;
+      --ctp-overlay0: #6c7086;
+      --ctp-surface2: #585b70;
+      --ctp-surface1: #45475a;
+      --ctp-surface0: #313244;
+      --ctp-base: #1e1e2e;
+      --ctp-mantle: #181825;
+      --ctp-crust: #11111b;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: var(--ctp-surface1) var(--ctp-crust);
+    }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background-color: var(--ctp-crust);
+      color: var(--ctp-text);
+      line-height: 1.7;
+      font-size: 15px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ---- Dot-grid background pattern ---- */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(var(--ctp-surface0) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ---- CRT scanline overlay ---- */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ---- Layout ---- */
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    section {
+      margin-bottom: 96px;
+    }
+
+    a {
+      color: var(--ctp-blue);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    a:hover {
+      color: var(--ctp-sapphire);
+    }
+
+    /* ---- Section titles ---- */
+    .section-label {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--ctp-overlay0);
+      border: 1px solid var(--ctp-surface1);
+      padding: 4px 12px;
+      border-radius: 2px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: clamp(22px, 3vw, 30px);
+      font-weight: 700;
+      color: var(--ctp-text);
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }
+
+    .section-desc {
+      color: var(--ctp-subtext0);
+      font-size: 14px;
+      max-width: 820px;
+      margin-bottom: 40px;
+    }
+
+    /* =========================================================
+       HERO
+       ========================================================= */
+    .hero {
+      padding: 80px 0 48px;
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .hero-terminal {
+      border: 1px solid var(--ctp-surface1);
+      border-radius: 8px;
+      background: var(--ctp-mantle);
+      max-width: 780px;
+      margin: 0 auto;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px var(--ctp-surface0),
+        0 24px 80px -12px rgba(0, 0, 0, 0.6),
+        0 0 120px -40px rgba(137, 180, 250, 0.08);
+    }
+
+    .hero-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--ctp-crust);
+      border-bottom: 1px solid var(--ctp-surface0);
+    }
+
+    .hero-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .hero-dot--red { background: var(--ctp-red); }
+    .hero-dot--yellow { background: var(--ctp-yellow); }
+    .hero-dot--green { background: var(--ctp-green); }
+
+    .hero-titlebar-text {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      color: var(--ctp-overlay0);
+      letter-spacing: 0.05em;
+    }
+
+    .hero-body {
+      padding: 48px 40px 56px;
+    }
+
+    .hero-prompt {
+      font-size: 13px;
+      color: var(--ctp-overlay0);
+      margin-bottom: 24px;
+      letter-spacing: 0.02em;
+    }
+
+    .hero-prompt .prompt-symbol {
+      color: var(--ctp-green);
+    }
+
+    .hero-prompt .prompt-path {
+      color: var(--ctp-blue);
+    }
+
+    .hero-title {
+      font-size: clamp(42px, 7vw, 72px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      margin-bottom: 8px;
+      background: linear-gradient(
+        135deg,
+        var(--ctp-mauve) 0%,
+        var(--ctp-blue) 30%,
+        var(--ctp-sapphire) 60%,
+        var(--ctp-teal) 100%
+      );
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 40px rgba(203, 166, 247, 0.2));
+    }
+
+    .hero-cursor {
+      display: inline-block;
+      width: 3px;
+      height: 0.8em;
+      background: var(--ctp-green);
+      margin-left: 4px;
+      vertical-align: baseline;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .hero-tagline {
+      font-size: clamp(14px, 2vw, 17px);
+      color: var(--ctp-subtext0);
+      margin-bottom: 36px;
+      font-weight: 400;
+      line-height: 1.6;
+    }
+
+    .hero-tagline em {
+      color: var(--ctp-subtext1);
+      font-style: normal;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 28px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--ctp-mauve);
+      color: var(--ctp-crust);
+      border-color: var(--ctp-mauve);
+    }
+
+    .btn-primary:hover {
+      background: var(--ctp-blue);
+      border-color: var(--ctp-blue);
+      color: var(--ctp-crust);
+      box-shadow: 0 0 24px rgba(203, 166, 247, 0.25);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--ctp-subtext1);
+      border-color: var(--ctp-surface1);
+    }
+
+    .btn-ghost:hover {
+      color: var(--ctp-text);
+      border-color: var(--ctp-overlay0);
+      background: var(--ctp-surface0);
+    }
+
+    /* =========================================================
+       FEATURES GRID
+       ========================================================= */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--ctp-mantle);
+      border: 1px solid var(--ctp-surface0);
+      border-radius: 6px;
+      padding: 28px 24px;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--ctp-blue), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--ctp-surface1);
+      background: var(--ctp-base);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.4);
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .feature-icon {
+      font-size: 24px;
+      margin-bottom: 16px;
+      display: block;
+      width: 44px;
+      height: 44px;
+      line-height: 44px;
+      text-align: center;
+      background: var(--ctp-surface0);
+      border-radius: 8px;
+      border: 1px solid var(--ctp-surface1);
+    }
+
+    .feature-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ctp-text);
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: var(--ctp-subtext0);
+      line-height: 1.6;
+    }
+
+    /* ---- Unique accent colors per card ---- */
+    .feature-card:nth-child(1):hover { border-color: var(--ctp-mauve); }
+    .feature-card:nth-child(1):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-mauve), transparent); }
+
+    .feature-card:nth-child(2):hover { border-color: var(--ctp-green); }
+    .feature-card:nth-child(2):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-green), transparent); }
+
+    .feature-card:nth-child(3):hover { border-color: var(--ctp-blue); }
+    .feature-card:nth-child(3):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-blue), transparent); }
+
+    .feature-card:nth-child(4):hover { border-color: var(--ctp-peach); }
+    .feature-card:nth-child(4):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-peach), transparent); }
+
+    .feature-card:nth-child(5):hover { border-color: var(--ctp-teal); }
+    .feature-card:nth-child(5):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-teal), transparent); }
+
+    .feature-card:nth-child(6):hover { border-color: var(--ctp-yellow); }
+    .feature-card:nth-child(6):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-yellow), transparent); }
+
+    .feature-card:nth-child(7):hover { border-color: var(--ctp-red); }
+    .feature-card:nth-child(7):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-red), transparent); }
+
+    .feature-card:nth-child(8):hover { border-color: var(--ctp-flamingo); }
+    .feature-card:nth-child(8):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-flamingo), transparent); }
+
+    /* =========================================================
+       TERMINAL MOCKUP
+       ========================================================= */
+    .mockup-section {
+      text-align: center;
+    }
+
+    .mockup-frame {
+      border: 1px solid var(--ctp-surface1);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--ctp-mantle);
+      box-shadow:
+        0 0 0 1px var(--ctp-surface0),
+        0 32px 80px -16px rgba(0, 0, 0, 0.5),
+        0 0 160px -60px rgba(203, 166, 247, 0.06);
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: left;
+    }
+
+    .mockup-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--ctp-crust);
+      border-bottom: 1px solid var(--ctp-surface0);
+    }
+
+    .mockup-titlebar-text {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      color: var(--ctp-overlay0);
+    }
+
+    .mockup-body {
+      padding: 28px;
+    }
+
+    .mockup-banner {
+      border: 2px solid var(--ctp-mauve);
+      border-radius: 4px;
+      padding: 16px 24px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .mockup-banner h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ctp-mauve);
+      letter-spacing: 0.04em;
+    }
+
+    .mockup-target {
+      border: 1px solid var(--ctp-surface1);
+      border-radius: 4px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      background: var(--ctp-base);
+    }
+
+    .mockup-target-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ctp-overlay0);
+      margin-bottom: 10px;
+    }
+
+    .mockup-target-row {
+      display: flex;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .mockup-target-row .label {
+      color: var(--ctp-subtext0);
+      min-width: 80px;
+    }
+
+    .mockup-target-row .value {
+      color: var(--ctp-text);
+    }
+
+    .mockup-wins {
+      border: 1px solid var(--ctp-yellow);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .mockup-wins-header {
+      background: rgba(249, 226, 175, 0.08);
+      border-bottom: 1px solid var(--ctp-yellow);
+      padding: 10px 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ctp-yellow);
+    }
+
+    .mockup-win {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--ctp-surface0);
+    }
+
+    .mockup-win:last-child {
+      border-bottom: none;
+    }
+
+    .mockup-win-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mockup-win-rank {
+      font-size: 13px;
+      color: var(--ctp-text);
+      font-weight: 600;
+    }
+
+    .mockup-win-score {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ctp-crust);
+      background: var(--ctp-green);
+      padding: 1px 8px;
+      border-radius: 3px;
+    }
+
+    .mockup-win-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ctp-text);
+    }
+
+    .mockup-win-badge {
+      font-size: 11px;
+      padding: 1px 8px;
+      border-radius: 3px;
+      font-weight: 500;
+    }
+
+    .mockup-win-badge--conf {
+      color: var(--ctp-green);
+      border: 1px solid var(--ctp-green);
+    }
+
+    .mockup-win-badge--risk {
+      color: var(--ctp-teal);
+      border: 1px solid var(--ctp-teal);
+    }
+
+    .mockup-win-desc {
+      font-size: 12px;
+      color: var(--ctp-subtext0);
+      margin-bottom: 10px;
+    }
+
+    .mockup-win-cmd {
+      background: var(--ctp-crust);
+      border: 1px solid var(--ctp-surface0);
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--ctp-green);
+      line-height: 1.7;
+    }
+
+    .mockup-caption {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--ctp-overlay1);
+      font-style: italic;
+      text-align: center;
+    }
+
+    /* =========================================================
+       ARCHITECTURE
+       ========================================================= */
+    .arch-terminal {
+      border: 1px solid var(--ctp-surface1);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--ctp-mantle);
+      box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.4);
+    }
+
+    .arch-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--ctp-crust);
+      border-bottom: 1px solid var(--ctp-surface0);
+    }
+
+    .arch-titlebar-text {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      color: var(--ctp-overlay0);
+    }
+
+    .arch-body {
+      padding: 32px;
+    }
+
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+    }
+
+    .arch-item {
+      padding: 20px;
+      border: 1px solid var(--ctp-surface0);
+      border-radius: 4px;
+      background: var(--ctp-base);
+    }
+
+    .arch-item-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .arch-item-marker {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ctp-crust);
+      background: var(--ctp-mauve);
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .arch-item:nth-child(2) .arch-item-marker { background: var(--ctp-green); }
+    .arch-item:nth-child(3) .arch-item-marker { background: var(--ctp-peach); }
+    .arch-item:nth-child(4) .arch-item-marker { background: var(--ctp-red); }
+
+    .arch-item h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ctp-text);
+    }
+
+    .arch-item p {
+      font-size: 13px;
+      color: var(--ctp-subtext0);
+      line-height: 1.6;
+    }
+
+    .arch-item code {
+      font-size: 12px;
+      color: var(--ctp-mauve);
+      background: var(--ctp-surface0);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    .arch-divider {
+      border: none;
+      border-top: 1px dashed var(--ctp-surface1);
+      margin: 28px 0;
+    }
+
+    .arch-stack {
+      font-size: 13px;
+      color: var(--ctp-subtext0);
+      text-align: center;
+    }
+
+    .arch-stack span {
+      display: inline-block;
+      padding: 4px 14px;
+      border: 1px solid var(--ctp-surface1);
+      border-radius: 3px;
+      margin: 4px;
+      background: var(--ctp-base);
+      color: var(--ctp-subtext1);
+      font-size: 12px;
+    }
+
+    /* =========================================================
+       KNOWLEDGE BASES
+       ========================================================= */
+    .kb-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .kb-card {
+      background: var(--ctp-mantle);
+      border: 1px solid var(--ctp-surface0);
+      border-radius: 6px;
+      padding: 24px 20px;
+      text-align: center;
+      transition: all 0.25s;
+    }
+
+    .kb-card:hover {
+      border-color: var(--ctp-surface1);
+      background: var(--ctp-base);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.4);
+    }
+
+    .kb-number {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .kb-card:nth-child(1) .kb-number { color: var(--ctp-green); }
+    .kb-card:nth-child(2) .kb-number { color: var(--ctp-peach); }
+    .kb-card:nth-child(3) .kb-number { color: var(--ctp-red); }
+    .kb-card:nth-child(4) .kb-number { color: var(--ctp-blue); }
+
+    .kb-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ctp-text);
+      margin-bottom: 6px;
+    }
+
+    .kb-desc {
+      font-size: 12px;
+      color: var(--ctp-subtext0);
+      line-height: 1.5;
+    }
+
+    /* =========================================================
+       RANKING TABLE
+       ========================================================= */
+    .ranking-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--ctp-surface1);
+      border-radius: 8px;
+      background: var(--ctp-mantle);
+    }
+
+    .ranking-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .ranking-table th {
+      background: var(--ctp-crust);
+      color: var(--ctp-subtext1);
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 14px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--ctp-surface0);
+    }
+
+    .ranking-table td {
+      padding: 12px 20px;
+      color: var(--ctp-subtext0);
+      border-bottom: 1px solid var(--ctp-surface0);
+    }
+
+    .ranking-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .ranking-table tr:hover td {
+      background: var(--ctp-base);
+    }
+
+    .ranking-table td:first-child {
+      color: var(--ctp-text);
+      font-weight: 500;
+    }
+
+    .ranking-table .highlight {
+      color: var(--ctp-green);
+      font-weight: 600;
+    }
+
+    /* =========================================================
+       GETTING STARTED
+       ========================================================= */
+    .start-row {
+      display: flex;
+      gap: 40px;
+      align-items: flex-start;
+    }
+
+    .start-terminal {
+      border: 1px solid var(--ctp-surface1);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--ctp-mantle);
+      box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.4);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .start-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--ctp-crust);
+      border-bottom: 1px solid var(--ctp-surface0);
+    }
+
+    .start-titlebar-text {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      color: var(--ctp-overlay0);
+    }
+
+    .start-body {
+      padding: 28px 32px;
+    }
+
+    .start-line {
+      margin-bottom: 4px;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .start-line .prompt {
+      color: var(--ctp-green);
+      user-select: none;
+    }
+
+    .start-line .cmd {
+      color: var(--ctp-text);
+    }
+
+    .start-line .comment {
+      color: var(--ctp-overlay0);
+    }
+
+    .start-line .flag {
+      color: var(--ctp-peach);
+    }
+
+    .start-line .arg {
+      color: var(--ctp-yellow);
+    }
+
+    .start-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .start-info p {
+      font-size: 14px;
+      color: var(--ctp-subtext0);
+      margin-bottom: 12px;
+      line-height: 1.7;
+    }
+
+    .start-info code {
+      font-size: 13px;
+      color: var(--ctp-peach);
+      background: var(--ctp-surface0);
+      padding: 2px 8px;
+      border-radius: 3px;
+      border: 1px solid var(--ctp-surface1);
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+    .site-footer {
+      border-top: 1px solid var(--ctp-surface0);
+      padding: 48px 0;
+      text-align: center;
+      margin-top: 32px;
+    }
+
+    .footer-tagline {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ctp-subtext1);
+      margin-bottom: 24px;
+      letter-spacing: 0.02em;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--ctp-overlay1);
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--ctp-blue);
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--ctp-overlay0);
+    }
+
+    .footer-disclaimer {
+      font-size: 11px;
+      color: var(--ctp-overlay0);
+      margin-top: 16px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+    @media (max-width: 900px) {
+      .features-grid,
+      .kb-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .arch-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero-body {
+        padding: 36px 24px 44px;
+      }
+      .start-row {
+        flex-direction: column;
+        gap: 24px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        font-size: 14px;
+      }
+      .page-wrap {
+        padding: 0 16px;
+      }
+      .features-grid,
+      .kb-grid {
+        grid-template-columns: 1fr;
+      }
+      section {
+        margin-bottom: 64px;
+      }
+      .hero {
+        padding: 48px 0 32px;
+      }
+      .hero-body {
+        padding: 28px 20px 36px;
+      }
+      .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+      .btn {
+        width: 100%;
+        max-width: 260px;
+        justify-content: center;
+      }
+      .arch-body {
+        padding: 20px;
+      }
+      .start-body {
+        padding: 20px;
+      }
+      .start-line {
+        font-size: 12px;
+      }
+      .feature-card {
+        padding: 22px 20px;
+      }
+      .mockup-body {
+        padding: 16px;
+      }
+    }
+
+    /* ---- Selection highlight ---- */
+    ::selection {
+      background: rgba(203, 166, 247, 0.25);
+      color: var(--ctp-text);
+    }
+
+    /* ---- Focus styles for accessibility ---- */
+    a:focus-visible,
+    .btn:focus-visible {
+      outline: 2px solid var(--ctp-mauve);
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero" id="top">
+    <div class="hero-terminal">
+      <div class="hero-titlebar">
+        <span class="hero-dot hero-dot--red"></span>
+        <span class="hero-dot hero-dot--yellow"></span>
+        <span class="hero-dot hero-dot--green"></span>
+        <span class="hero-titlebar-text">whirlpool -- privesc reasoning engine</span>
+      </div>
+      <div class="hero-body">
+        <h1 class="hero-title">Whirlpool<span class="hero-cursor" aria-hidden="true"></span></h1>
+        <p class="hero-tagline">
+          <em>Privilege escalation reasoning engine</em><br>
+          Parse enumeration output. Get ranked attack playbooks.
+        </p>
+        <div class="hero-buttons">
+          <a href="#getting-started" class="btn btn-primary">Get Started</a>
+          <a href="https://github.com/Real-Fruit-Snacks/Whirlpool" class="btn btn-ghost">View on GitHub</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FEATURES ============ -->
+  <section id="features">
+    <span class="section-label">// capabilities</span>
+    <h2 class="section-title">From raw output to attack plan</h2>
+    <p class="section-desc">
+      Feed Whirlpool any LinPEAS, WinPEAS, or manual enumeration output and get back a prioritized exploitation playbook with exact commands, confidence ratings, and multi-step attack chains.
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#9881;</span>
+        <h3>Auto-Detection</h3>
+        <p>Identifies LinPEAS .sh, WinPEAS .exe/.bat/.beta, and manual command output automatically. No <code style="font-size:12px;color:var(--ctp-mauve);background:var(--ctp-surface0);padding:1px 5px;border-radius:3px;">--type</code> flag needed.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#128218;</span>
+        <h3>Offline Knowledge</h3>
+        <p>246 GTFOBins, 39 LOLBAS, 18 kernel exploits, 9 potato attacks. Everything runs locally -- no API calls, no internet required.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#9878;</span>
+        <h3>Composite Scoring</h3>
+        <p>Four-dimension weighted scoring: reliability (40%), safety (30%), simplicity (20%), stealth (10%). Five ranking profiles shift the weights.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#8644;</span>
+        <h3>Attack Chains</h3>
+        <p>Detects 12 multi-step paths: cron PATH hijack, Docker escape, NFS SUID planting, wildcard injection, LD_PRELOAD, and more.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#9673;</span>
+        <h3>Noise Filtering</h3>
+        <p>Purpose-built parsers reject grep artifacts, version patterns, and false-positive words. Tested against 22 real-world samples with zero failures.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#9998;</span>
+        <h3>Multiple Formats</h3>
+        <p>Rich terminal output with Catppuccin Mocha theme, Markdown reports for documentation, and structured JSON for tool integration.</p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#9733;</span>
+        <h3>Quick Wins</h3>
+        <p>Surface the top 5 highest-probability techniques instantly. One flag: <code style="font-size:12px;color:var(--ctp-mauve);background:var(--ctp-surface0);padding:1px 5px;border-radius:3px;">--quick-wins</code></p>
+      </div>
+
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#128736;</span>
+        <h3>Python API</h3>
+        <p>Import parsers, analyzer, ranker, and chain detector directly. Build Whirlpool into your own tooling and automation pipelines.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TERMINAL MOCKUP ============ -->
+  <section class="mockup-section" id="demo">
+    <span class="section-label">// in action</span>
+    <h2 class="section-title">Raw output in. Attack plan out.</h2>
+    <p class="section-desc" style="margin-left:auto;margin-right:auto;">
+      Whirlpool parses enumeration data, matches findings against knowledge bases, and ranks exploitation paths by probability of success.
+    </p>
+
+    <div class="mockup-frame">
+      <div class="mockup-titlebar">
+        <span class="hero-dot hero-dot--red"></span>
+        <span class="hero-dot hero-dot--yellow"></span>
+        <span class="hero-dot hero-dot--green"></span>
+        <span class="mockup-titlebar-text">whirlpool linpeas_output.txt --profile oscp</span>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-banner">
+          <h2>WHIRLPOOL - Privilege Escalation Analysis</h2>
+        </div>
+
+        <div class="mockup-target">
+          <div class="mockup-target-title">Target Information</div>
+          <div class="mockup-target-row"><span class="label">Hostname:</span> <span class="value">jarvis</span></div>
+          <div class="mockup-target-row"><span class="label">Kernel:</span> <span class="value">4.9.0</span></div>
+          <div class="mockup-target-row"><span class="label">User:</span> <span class="value">www-data</span></div>
+        </div>
+
+        <div class="mockup-wins">
+          <div class="mockup-wins-header">Quick Wins - Highest probability techniques</div>
+
+          <div class="mockup-win">
+            <div class="mockup-win-header">
+              <span class="mockup-win-rank">[1]</span>
+              <span class="mockup-win-score">95</span>
+              <span class="mockup-win-name">Sudo systemctl</span>
+              <span class="mockup-win-badge mockup-win-badge--conf">high</span>
+              <span class="mockup-win-badge mockup-win-badge--risk">low risk</span>
+            </div>
+            <div class="mockup-win-desc">User can run systemctl as root with NOPASSWD</div>
+            <div class="mockup-win-cmd">sudo systemctl<br>!sh</div>
+          </div>
+
+          <div class="mockup-win">
+            <div class="mockup-win-header">
+              <span class="mockup-win-rank">[2]</span>
+              <span class="mockup-win-score">82</span>
+              <span class="mockup-win-name">SUID pkexec</span>
+              <span class="mockup-win-badge mockup-win-badge--conf">high</span>
+              <span class="mockup-win-badge mockup-win-badge--risk">low risk</span>
+            </div>
+            <div class="mockup-win-desc">Exploit SUID bit on pkexec (CVE-2021-4034)</div>
+            <div class="mockup-win-cmd">python3 -c 'import os; os.execvp("pkexec",<br>&nbsp; ["", "-c", "#!/bin/sh\nsh"])'</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="mockup-caption">Whirlpool analyzing LinPEAS output -- ranked techniques with exact exploitation commands.</p>
+  </section>
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section id="architecture">
+    <span class="section-label">// architecture</span>
+    <h2 class="section-title">Three-stage pipeline. Zero network calls.</h2>
+    <p class="section-desc">
+      Parse enumeration output into structured data, match findings against offline knowledge bases, and rank exploitation paths with composite scoring. Commands are output as text -- never executed.
+    </p>
+
+    <div class="arch-terminal">
+      <div class="arch-titlebar">
+        <span class="hero-dot hero-dot--red"></span>
+        <span class="hero-dot hero-dot--yellow"></span>
+        <span class="hero-dot hero-dot--green"></span>
+        <span class="arch-titlebar-text">system architecture</span>
+      </div>
+      <div class="arch-body">
+        <div class="arch-grid">
+          <div class="arch-item">
+            <div class="arch-item-header">
+              <span class="arch-item-marker">01</span>
+              <h3>Parsers</h3>
+            </div>
+            <p>
+              Strip ANSI codes, detect format variants (LinPEAS <code>.sh</code>, WinPEAS <code>.exe</code>/<code>.bat</code>/<code>beta</code>), and extract structured data: SUID binaries, capabilities, sudo rights, services, privileges, and more.
+            </p>
+          </div>
+
+          <div class="arch-item">
+            <div class="arch-item-header">
+              <span class="arch-item-marker">02</span>
+              <h3>Analyzer</h3>
+            </div>
+            <p>
+              Match parsed findings against <code>gtfobins.json</code>, <code>kernel_exploits.json</code>, <code>potato_matrix.json</code>, and <code>lolbas.json</code>. Generate ExploitationPath objects with exact commands.
+            </p>
+          </div>
+
+          <div class="arch-item">
+            <div class="arch-item-header">
+              <span class="arch-item-marker">03</span>
+              <h3>Ranker</h3>
+            </div>
+            <p>
+              Composite scoring across reliability, safety, simplicity, and stealth. Five profiles (<code>default</code>, <code>oscp</code>, <code>ctf</code>, <code>stealth</code>, <code>safe</code>) shift dimension weights.
+            </p>
+          </div>
+
+          <div class="arch-item">
+            <div class="arch-item-header">
+              <span class="arch-item-marker">04</span>
+              <h3>Chain Detector</h3>
+            </div>
+            <p>
+              Detect 12 multi-step attack paths that single-finding scanners miss: cron PATH hijack, Docker socket abuse, NFS SUID planting, wildcard injection, LD_PRELOAD, writable /etc/passwd.
+            </p>
+          </div>
+        </div>
+
+        <hr class="arch-divider">
+
+        <div class="arch-stack">
+          <span>Python 3.9+</span>
+          <span>Rich</span>
+          <span>Dataclasses</span>
+          <span>Pathlib</span>
+          <span>Argparse</span>
+          <span>JSON</span>
+          <span>Zero Dependencies</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ KNOWLEDGE BASES ============ -->
+  <section id="knowledge">
+    <span class="section-label">// knowledge bases</span>
+    <h2 class="section-title">Offline. Comprehensive. Always current.</h2>
+    <p class="section-desc">
+      Four bundled knowledge bases covering Linux and Windows privilege escalation techniques. No internet connection required.
+    </p>
+
+    <div class="kb-grid">
+      <div class="kb-card">
+        <div class="kb-number">246</div>
+        <div class="kb-label">GTFOBins</div>
+        <div class="kb-desc">Unix binaries with SUID, sudo, and capabilities exploitation techniques</div>
+      </div>
+
+      <div class="kb-card">
+        <div class="kb-number">39</div>
+        <div class="kb-label">LOLBAS</div>
+        <div class="kb-desc">Windows living-off-the-land binaries and scripts</div>
+      </div>
+
+      <div class="kb-card">
+        <div class="kb-number">18</div>
+        <div class="kb-label">Kernel Exploits</div>
+        <div class="kb-desc">Linux + Windows CVEs with affected version ranges and commands</div>
+      </div>
+
+      <div class="kb-card">
+        <div class="kb-number">9</div>
+        <div class="kb-label">Potato Attacks</div>
+        <div class="kb-desc">Token impersonation variants with OS compatibility matrix</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RANKING ============ -->
+  <section id="ranking">
+    <span class="section-label">// ranking profiles</span>
+    <h2 class="section-title">Scoring tuned to your scenario</h2>
+    <p class="section-desc">
+      Each exploitation path is scored across four dimensions. Profiles shift the weights to match OSCP exams, CTF speed runs, red team stealth, or safe testing.
+    </p>
+
+    <div class="ranking-table-wrap">
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Default</th>
+            <th>OSCP</th>
+            <th>CTF</th>
+            <th>Stealth</th>
+            <th>Safe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Reliability</td>
+            <td class="highlight">40%</td>
+            <td class="highlight">50%</td>
+            <td class="highlight">50%</td>
+            <td>25%</td>
+            <td>30%</td>
+          </tr>
+          <tr>
+            <td>Safety</td>
+            <td>30%</td>
+            <td>25%</td>
+            <td>10%</td>
+            <td>25%</td>
+            <td class="highlight">50%</td>
+          </tr>
+          <tr>
+            <td>Simplicity</td>
+            <td>20%</td>
+            <td>20%</td>
+            <td class="highlight">35%</td>
+            <td>10%</td>
+            <td>15%</td>
+          </tr>
+          <tr>
+            <td>Stealth</td>
+            <td>10%</td>
+            <td>5%</td>
+            <td>5%</td>
+            <td class="highlight">40%</td>
+            <td>5%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ GETTING STARTED ============ -->
+  <section id="getting-started">
+    <span class="section-label">// quickstart</span>
+    <h2 class="section-title">Running in 30 seconds</h2>
+    <p class="section-desc">
+      Clone, install, run. No Docker, no build step, no configuration files. Python 3.9+ is the only requirement.
+    </p>
+
+    <div class="start-row">
+      <div class="start-terminal">
+        <div class="start-titlebar">
+          <span class="hero-dot hero-dot--red"></span>
+          <span class="hero-dot hero-dot--yellow"></span>
+          <span class="hero-dot hero-dot--green"></span>
+          <span class="start-titlebar-text">bash</span>
+        </div>
+        <div class="start-body">
+          <div class="start-line">
+            <span class="comment"># Clone and install</span>
+          </div>
+          <div class="start-line">
+            <span class="prompt">$</span> <span class="cmd">git clone</span> <span class="arg">https://github.com/Real-Fruit-Snacks/Whirlpool.git</span>
+          </div>
+          <div class="start-line">
+            <span class="prompt">$</span> <span class="cmd">cd</span> <span class="arg">Whirlpool</span>
+          </div>
+          <div class="start-line" style="margin-bottom:16px;">
+            <span class="prompt">$</span> <span class="cmd">pip install</span> <span class="flag">-e</span> <span class="arg">.</span>
+          </div>
+          <div class="start-line">
+            <span class="comment"># Analyze enumeration output</span>
+          </div>
+          <div class="start-line">
+            <span class="prompt">$</span> <span class="cmd">whirlpool</span> <span class="arg">linpeas_output.txt</span>
+          </div>
+          <div class="start-line" style="margin-top:16px;margin-bottom:0;">
+            <span class="comment"># Customize output:</span>
+          </div>
+          <div class="start-line" style="margin-bottom:0;">
+            <span class="prompt">$</span> <span class="cmd">whirlpool</span> <span class="arg">enum.txt</span> <span class="flag">--profile</span> <span class="arg">oscp</span> <span class="comment">&nbsp;&nbsp;# OSCP mode</span>
+          </div>
+          <div class="start-line" style="margin-bottom:0;">
+            <span class="prompt">$</span> <span class="cmd">whirlpool</span> <span class="arg">enum.txt</span> <span class="flag">--quick-wins</span> <span class="comment">&nbsp;&nbsp;# top 5 only</span>
+          </div>
+          <div class="start-line" style="margin-bottom:0;">
+            <span class="prompt">$</span> <span class="cmd">whirlpool</span> <span class="arg">enum.txt</span> <span class="flag">-f</span> <span class="arg">markdown</span> <span class="flag">-o</span> <span class="arg">report.md</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="start-info">
+      <p>
+        Point Whirlpool at any enumeration output file. It auto-detects the format, parses the findings, matches them against offline knowledge bases, and outputs a ranked exploitation playbook.
+      </p>
+      <p>
+        Use <code>--profile oscp</code> for exam scenarios, <code>--profile ctf</code> for speed, <code>--profile stealth</code> for red team ops, or <code>--profile safe</code> when system stability matters.
+      </p>
+      <p>
+        Export to <strong style="color:var(--ctp-text);">Markdown</strong> for reports, <strong style="color:var(--ctp-text);">JSON</strong> for tool integration, or use the default <strong style="color:var(--ctp-text);">terminal</strong> output with Catppuccin Mocha theming.
+      </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <p class="footer-tagline">Built for offense. Designed for clarity.</p>
+    <nav class="footer-links" aria-label="Footer links">
+      <a href="https://github.com/Real-Fruit-Snacks/Whirlpool">GitHub</a>
+      <a href="https://github.com/Real-Fruit-Snacks/Whirlpool/blob/main/LICENSE">License (MIT)</a>
+      <a href="https://github.com/Real-Fruit-Snacks/Whirlpool/issues">Report Issue</a>
+    </nav>
+    <p class="footer-copy">Whirlpool -- privilege escalation reasoning engine</p>
+    <p class="footer-disclaimer">
+      For authorized security testing, CTF competitions, and educational purposes only.
+      Always obtain proper authorization before testing on systems you do not own.
+    </p>
+  </footer>
+
+</div>
+
+</body>
+</html>
