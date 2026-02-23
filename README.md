@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/banner.svg" alt="Whirlpool Banner" width="800">
+
 # Whirlpool
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
