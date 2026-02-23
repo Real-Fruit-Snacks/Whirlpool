@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .. import __version__
 from ..engine.analyzer import ExploitationPath
 from ..engine.chain import AttackChain
 from ..engine.ranker import Ranker
@@ -48,7 +49,7 @@ class JSONOutput:
             "metadata": {
                 "generated_at": datetime.now().isoformat(),
                 "tool": "Whirlpool",
-                "version": "0.1.0",
+                "version": __version__,
                 "total_findings": len(paths),
                 "quick_wins_count": len(quick_wins)
             }
@@ -118,7 +119,7 @@ class JSONOutput:
             **kwargs: Additional arguments passed to generate()
         """
         content = self.to_json(paths, **kwargs)
-        Path(output_path).write_text(content)
+        Path(output_path).write_text(content, encoding='utf-8')
 
     def _generate_summary(self, paths: list[ExploitationPath]) -> dict:
         """Generate summary statistics."""

@@ -74,6 +74,12 @@ CATEGORY_RELIABILITY_BONUS: dict[Category, int] = {
     Category.POTATO: 5,         # Well-documented
     Category.KERNEL: -10,       # Can be unreliable
     Category.WILDCARD: -5,      # Situational
+    Category.LOLBAS: 5,         # Well-documented techniques
+    Category.NETWORK: 0,        # Neutral
+    Category.WRITABLE_FILE: 10, # Very reliable
+    Category.GROUP: 5,          # Usually reliable
+    Category.UAC: 5,
+    Category.DLL: 0,            # Situational
 }
 
 

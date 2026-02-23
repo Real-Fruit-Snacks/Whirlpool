@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Callable
+from collections.abc import Callable
 
 from .winpeas import (
     ScheduledTaskInfo,
@@ -161,7 +161,7 @@ class ManualWindowsParser:
                 parts = line.split(None, 1)
                 if parts:
                     path = parts[0]
-                    continue
+                # Do not continue — the same line may also contain permissions
 
             # Check for dangerous permissions for non-admin users
             if any(perm in line.upper() for perm in dangerous_perms):
@@ -339,9 +339,9 @@ class ManualWindowsParser:
                 try:
                     parsers[cmd_name](output)
                 except (ValueError, KeyError, IndexError):
-                    logging.getLogger(__name__).warning(f"Failed to parse {cmd_name}")
+                    logging.getLogger(__name__).warning("Failed to parse %s", cmd_name)
                 except Exception:
-                    logging.getLogger(__name__).error(f"Unexpected error parsing {cmd_name}", exc_info=True)
+                    logging.getLogger(__name__).error("Unexpected error parsing %s", cmd_name, exc_info=True)
 
         return self.results
 

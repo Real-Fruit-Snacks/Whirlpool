@@ -5,12 +5,20 @@ Generates clean markdown for OSCP reports and CTF writeups.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from pathlib import Path
 
 from ..engine.analyzer import Confidence, ExploitationPath, Risk
 from ..engine.chain import AttackChain
 from ..engine.ranker import Ranker
+
+_MD_SPECIAL = re.compile(r'([\\`*_\{\}\[\]()#+\-.!|])')
+
+
+def _escape_md(text: str) -> str:
+    """Escape markdown special characters in user-derived text."""
+    return _MD_SPECIAL.sub(r'\\\1', text)
 
 
 class MarkdownOutput:
@@ -80,7 +88,7 @@ class MarkdownOutput:
             **kwargs: Additional arguments passed to generate()
         """
         content = self.generate(paths, **kwargs)
-        Path(output_path).write_text(content)
+        Path(output_path).write_text(content, encoding='utf-8')
 
     def _generate_header(self, target_info: dict | None) -> str:
         """Generate report header."""
@@ -96,15 +104,15 @@ class MarkdownOutput:
             lines.append("## Target Information")
             lines.append("")
             if "hostname" in target_info:
-                lines.append(f"- **Hostname:** {target_info['hostname']}")
+                lines.append(f"- **Hostname:** {_escape_md(target_info['hostname'])}")
             if "os" in target_info:
-                lines.append(f"- **OS:** {target_info['os']}")
+                lines.append(f"- **OS:** {_escape_md(target_info['os'])}")
             if "kernel" in target_info:
-                lines.append(f"- **Kernel:** {target_info['kernel']}")
+                lines.append(f"- **Kernel:** {_escape_md(target_info['kernel'])}")
             if "user" in target_info:
-                lines.append(f"- **Current User:** {target_info['user']}")
+                lines.append(f"- **Current User:** {_escape_md(target_info['user'])}")
             if "groups" in target_info:
-                lines.append(f"- **Groups:** {', '.join(target_info['groups'])}")
+                lines.append(f"- **Groups:** {_escape_md(', '.join(target_info['groups']))}")
 
         return "\n".join(lines)
 
@@ -185,13 +193,13 @@ class MarkdownOutput:
         for i, path in enumerate(quick_wins, 1):
             score = self.ranker.get_score(path)
             lines.extend([
-                f"### {i}. {path.technique_name}",
+                f"### {i}. {_escape_md(path.technique_name)}",
                 "",
                 f"**Score:** {score:.0f}/100 | "
                 f"**Confidence:** {path.confidence.value} | "
                 f"**Risk:** {path.risk.value}",
                 "",
-                f"{path.description}",
+                f"{_escape_md(path.description)}",
                 "",
                 "**Finding:**",
                 "```",

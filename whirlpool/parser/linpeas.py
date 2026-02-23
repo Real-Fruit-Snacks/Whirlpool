@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 # ANSI escape code pattern - handles all common sequences
-ANSI_PATTERN = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\x1b[^[]]')
+ANSI_PATTERN = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b[^[]]')
 
 # Module-level compiled regex patterns for reuse
 _LS_SUID_PATTERN = re.compile(
@@ -41,7 +41,26 @@ _SUDO_PATTERN = re.compile(
     re.MULTILINE
 )
 
-_NFS_PATTERN = re.compile(r'^(/\S+)\s+\S*\(.*no_root_squash.*\)', re.MULTILINE | re.IGNORECASE)
+_NFS_PATTERN = re.compile(r'^(/\S+)\s+\S*\([^)]*no_root_squash[^)]*\)', re.MULTILINE | re.IGNORECASE)
+
+# Capability entry pattern: /path/to/binary = cap_xxx+ep
+_CAP_ENTRY_PATTERN = re.compile(r'^(\S+)\s*[=:]\s*(.+)$')
+
+# Cron entry pattern: 5 time fields + user + command
+_CRON_ENTRY_PATTERN = re.compile(
+    r'^([\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+)\s+'
+    r'(\S+)\s+'
+    r'(.+)$'
+)
+
+# Network service pattern: netstat/ss output
+_SERVICE_PATTERN = re.compile(
+    r'(tcp|udp)\S*\s+'
+    r'\d+\s+\d+\s+'
+    r'([\d\.\*:]+):(\d+)\s+'
+    r'([\d\.\*:]+):(\S+)\s+'
+    r'(\S+)?'
+)
 
 # Words that appear in parentheses but aren't sudo runas specs
 _NOISE_RUNAS = frozenset({
@@ -199,6 +218,12 @@ class LinPEASParser:
         Returns:
             LinPEASResults containing all extracted data
         """
+        # Reset state for reusability
+        self.results = LinPEASResults()
+        self._current_section = ""
+        self._current_subsection = ""
+        self._section_content = {}
+
         # Strip ANSI codes
         clean_content = self._strip_ansi(content)
 
@@ -468,11 +493,13 @@ class LinPEASParser:
                     for g in groups_str.split(','):
                         match = re.search(r'\(([^)]+)\)', g)
                         if match:
-                            self.results.current_groups.append(match.group(1))
+                            group_name = match.group(1)
+                            if group_name not in self.results.current_groups:
+                                self.results.current_groups.append(group_name)
                         else:
                             # Just the gid
                             g = g.strip()
-                            if g:
+                            if g and g not in self.results.current_groups:
                                 self.results.current_groups.append(g)
 
     def _parse_suid_binaries(self) -> None:
@@ -519,9 +546,6 @@ class LinPEASParser:
         """Extract binaries with capabilities."""
         lines = self._get_section_lines("Capabilities", "cap_")
 
-        # Pattern: /path/to/binary = cap_xxx+ep
-        cap_pattern = re.compile(r'^(\S+)\s*[=:]\s*(.+)$')
-
         for line in lines:
             line = line.strip()
 
@@ -529,7 +553,7 @@ class LinPEASParser:
                 continue
 
             # Try to match path = capabilities format
-            match = cap_pattern.match(line)
+            match = _CAP_ENTRY_PATTERN.match(line)
             if match:
                 path, cap_str = match.groups()
 
@@ -560,13 +584,6 @@ class LinPEASParser:
         """Extract cron job information."""
         lines = self._get_section_lines("Cron", "crontab", "Scheduled")
 
-        # Common cron patterns
-        cron_pattern = re.compile(
-            r'^([\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+)\s+'  # schedule
-            r'(\S+)\s+'  # user (optional)
-            r'(.+)$'     # command
-        )
-
         current_file = ""
 
         for line in lines:
@@ -584,7 +601,7 @@ class LinPEASParser:
             writable = "writable" in line.lower() or "WRITABLE" in line
 
             # Try to parse cron entry
-            match = cron_pattern.match(line)
+            match = _CRON_ENTRY_PATTERN.match(line)
             if match:
                 schedule, user, command = match.groups()
                 entry = CronEntry(
@@ -611,22 +628,13 @@ class LinPEASParser:
         """Extract listening network services."""
         lines = self._get_section_lines("Network", "Listening", "Active", "netstat", "ss -")
 
-        # Pattern for netstat/ss output
-        service_pattern = re.compile(
-            r'(tcp|udp)\S*\s+'           # protocol
-            r'\d+\s+\d+\s+'              # recv-q send-q
-            r'([\d\.\*:]+):(\d+)\s+'     # local address:port
-            r'([\d\.\*:]+):(\S+)\s+'     # foreign address:port
-            r'(\S+)?'                    # state (optional)
-        )
-
         for line in lines:
             line = line.strip()
 
             if not line or not any(x in line.lower() for x in ['listen', 'tcp', 'udp']):
                 continue
 
-            match = service_pattern.search(line)
+            match = _SERVICE_PATTERN.search(line)
             if match:
                 proto, local_addr, local_port, foreign_addr, foreign_port, state = match.groups()
 
@@ -681,12 +689,12 @@ class LinPEASParser:
         all_text = '\n'.join(lines).lower()
 
         # Check for container indicators
-        self.results.docker.in_container = any([
-            "docker" in all_text and "inside" in all_text,
-            "container" in all_text,
-            "cgroup" in all_text and "docker" in all_text,
-            "/.dockerenv" in all_text
-        ])
+        self.results.docker.in_container = (
+            ("docker" in all_text and "inside" in all_text)
+            or "container" in all_text
+            or ("cgroup" in all_text and "docker" in all_text)
+            or "/.dockerenv" in all_text
+        )
 
         # Check for docker.sock access
         self.results.docker.docker_socket_accessible = "docker.sock" in all_text and "writable" in all_text
@@ -734,7 +742,7 @@ class LinPEASParser:
             if not line.startswith('/'):
                 continue
 
-            path = line.split()[0] if line.split() else line
+            path = parts[0] if (parts := line.split()) else line
 
             # SSH keys
             if any(x in path.lower() for x in ['id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519', 'authorized_keys']):

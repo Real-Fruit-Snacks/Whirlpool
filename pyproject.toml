@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "whirlpool"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Privilege Escalation Reasoning Engine - Analyze enumeration output and generate exploitation playbooks"
 readme = "README.md"
 license = {text = "MIT"}
@@ -59,6 +59,9 @@ Homepage = "https://github.com/Real-Fruit-Snacks/Whirlpool"
 Documentation = "https://github.com/Real-Fruit-Snacks/Whirlpool#readme"
 Repository = "https://github.com/Real-Fruit-Snacks/Whirlpool"
 Issues = "https://github.com/Real-Fruit-Snacks/Whirlpool/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "whirlpool.__version__"}
 
 [tool.setuptools]
 packages = [

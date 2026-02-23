@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 # ANSI escape code pattern
-ANSI_PATTERN = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\x1b[^[]]')
+ANSI_PATTERN = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b[^[]]')
 
 
 @dataclass
@@ -135,6 +135,10 @@ class WinPEASParser:
         Returns:
             WinPEASResults containing all extracted data
         """
+        # Reset state for reusability
+        self.results = WinPEASResults()
+        self._section_content = {}
+
         # Strip ANSI codes
         clean_content = self._strip_ansi(content)
 

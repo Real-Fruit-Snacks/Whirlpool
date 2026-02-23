@@ -19,6 +19,41 @@ from .linpeas import (
     UserInfo,
 )
 
+# Module-level compiled regex patterns for reuse
+_CRON_SYSTEM_PATTERN = re.compile(
+    r'^([\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+)\s+'
+    r'(\S+)\s+'
+    r'(.+)$'
+)
+_CRON_USER_PATTERN = re.compile(
+    r'^([\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+)\s+'
+    r'(.+)$'
+)
+_CRON_SPECIAL_SYSTEM_PATTERN = re.compile(r'^(@\w+)\s+(\S+)\s+(.+)$')
+_CRON_SPECIAL_USER_PATTERN = re.compile(r'^(@\w+)\s+(.+)$')
+_SUDO_ENTRY_PATTERN = re.compile(r'\(([^)]+)\)\s*(NOPASSWD:)?\s*(.+)$')
+_NETSTAT_PATTERN = re.compile(
+    r'(tcp|udp)\S*\s+'
+    r'\d+\s+\d+\s+'
+    r'([\d\.\*:]+):(\d+)\s+'
+    r'([\d\.\*:]+):(\S+)\s+'
+    r'(\S+)?'
+)
+_LS_LA_PATTERN = re.compile(
+    r'^([drwxsStT-]{10})\s+'
+    r'(\d+)\s+'
+    r'(\S+)\s+'
+    r'(\S+)\s+'
+    r'(\d+)\s+'
+    r'(.{10,12})\s+'
+    r'(.+)$'
+)
+_USERNAME_PATTERN = re.compile(r'^[A-Za-z_][A-Za-z0-9_-]*$')
+_SPECIAL_SCHEDULES = frozenset({
+    '@reboot', '@yearly', '@annually', '@monthly',
+    '@weekly', '@daily', '@midnight', '@hourly',
+})
+
 
 class ManualLinuxParser:
     """Parser for manual Linux enumeration command outputs."""
@@ -120,27 +155,74 @@ class ManualLinuxParser:
     def parse_crontab(self, output: str, file_path: str = "/etc/crontab") -> None:
         """Parse crontab file content.
 
-        Example:
-        # m h dom mon dow user command
-        17 * * * * root cd / && run-parts --report /etc/cron.hourly
+        Supports two formats:
+        - System crontab (6+ fields: schedule user command):
+            17 * * * * root cd / && run-parts --report /etc/cron.hourly
+        - User crontab from 'crontab -l' (5 time fields then command, no user field):
+            17 * * * * cd / && run-parts --report /etc/cron.hourly
+        - Special time strings: @reboot, @yearly, @monthly, @weekly, @daily, @hourly
         """
-        cron_pattern = re.compile(
-            r'^([\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+\s+[\d\*,/-]+)\s+'
-            r'(\S+)\s+'
-            r'(.+)$'
-        )
-
         for line in output.strip().splitlines():
             line = line.strip()
             if not line or line.startswith('#'):
                 continue
 
-            match = cron_pattern.match(line)
-            if match:
-                schedule, user, command = match.groups()
+            # Handle special time strings (@reboot, @daily, etc.)
+            parts = line.split()
+            first_token = parts[0] if parts else ''
+            if first_token.lower() in _SPECIAL_SCHEDULES:
+                # Try system format: @reboot user command
+                sp_sys = _CRON_SPECIAL_SYSTEM_PATTERN.match(line)
+                if sp_sys:
+                    schedule, user_or_cmd, rest = sp_sys.groups()
+                    if _USERNAME_PATTERN.match(user_or_cmd):
+                        entry = CronEntry(
+                            schedule=schedule,
+                            user=user_or_cmd,
+                            command=rest,
+                            file_path=file_path
+                        )
+                        self.results.cron_jobs.append(entry)
+                        continue
+
+                # User format: @reboot command
+                sp_usr = _CRON_SPECIAL_USER_PATTERN.match(line)
+                if sp_usr:
+                    schedule, command = sp_usr.groups()
+                    entry = CronEntry(
+                        schedule=schedule,
+                        user=self.results.current_user or "current_user",
+                        command=command,
+                        file_path=file_path
+                    )
+                    self.results.cron_jobs.append(entry)
+                continue
+
+            # Try system format first (user field is a plain word with no spaces,
+            # and there must be a command after it)
+            sys_match = _CRON_SYSTEM_PATTERN.match(line)
+            if sys_match:
+                schedule, user_or_cmd, rest = sys_match.groups()
+                # Heuristic: if the second token looks like a username (no path
+                # separators, no shell metacharacters) treat it as system format.
+                if _USERNAME_PATTERN.match(user_or_cmd):
+                    entry = CronEntry(
+                        schedule=schedule,
+                        user=user_or_cmd,
+                        command=rest,
+                        file_path=file_path
+                    )
+                    self.results.cron_jobs.append(entry)
+                    continue
+                # Fall through to user-format handling below
+
+            # User crontab format: 5 time fields then command, no user field
+            usr_match = _CRON_USER_PATTERN.match(line)
+            if usr_match:
+                schedule, command = usr_match.groups()
                 entry = CronEntry(
                     schedule=schedule,
-                    user=user,
+                    user=self.results.current_user or "current_user",
                     command=command,
                     file_path=file_path
                 )
@@ -154,13 +236,10 @@ class ManualLinuxParser:
             (ALL : ALL) NOPASSWD: /usr/bin/vim
             (root) /usr/bin/find
         """
-        # Pattern for sudo entries
-        sudo_pattern = re.compile(r'\(([^)]+)\)\s*(NOPASSWD:)?\s*(.+)$')
-
         for line in output.strip().splitlines():
             line = line.strip()
 
-            match = sudo_pattern.search(line)
+            match = _SUDO_ENTRY_PATTERN.search(line)
             if match:
                 runas, nopasswd, commands = match.groups()
                 entry = SudoEntry(
@@ -208,20 +287,12 @@ class ManualLinuxParser:
         Example:
         tcp  0  0 0.0.0.0:22  0.0.0.0:*  LISTEN  1234/sshd
         """
-        service_pattern = re.compile(
-            r'(tcp|udp)\S*\s+'
-            r'\d+\s+\d+\s+'
-            r'([\d\.\*:]+):(\d+)\s+'
-            r'([\d\.\*:]+):(\S+)\s+'
-            r'(\S+)?'
-        )
-
         for line in output.strip().splitlines():
             line = line.strip()
             if not line or 'Proto' in line:
                 continue
 
-            match = service_pattern.search(line)
+            match = _NETSTAT_PATTERN.search(line)
             if match:
                 proto, local_addr, local_port, foreign_addr, foreign_port, state = match.groups()
 
@@ -290,15 +361,7 @@ class ManualLinuxParser:
             output: ls -la output
             context: What type of files (suid, sgid, writable, etc.)
         """
-        ls_pattern = re.compile(
-            r'^([drwxsStT-]{10})\s+'
-            r'(\d+)\s+'
-            r'(\S+)\s+'
-            r'(\S+)\s+'
-            r'(\d+)\s+'
-            r'(.{10,12})\s+'
-            r'(.+)$'
-        )
+        ls_pattern = _LS_LA_PATTERN
 
         for line in output.strip().splitlines():
             line = line.strip()
@@ -352,9 +415,9 @@ class ManualLinuxParser:
                 try:
                     parsers[cmd_name](output)
                 except (ValueError, KeyError, IndexError):
-                    logging.getLogger(__name__).warning(f"Failed to parse {cmd_name}")
+                    logging.getLogger(__name__).warning("Failed to parse %s", cmd_name)
                 except Exception:
-                    logging.getLogger(__name__).error(f"Unexpected error parsing {cmd_name}", exc_info=True)
+                    logging.getLogger(__name__).error("Unexpected error parsing %s", cmd_name, exc_info=True)
 
         return self.results
 

