@@ -1,10 +1,8 @@
 <div align="center">
 
-<img src="docs/banner.svg" alt="Whirlpool Banner" width="800">
+<img src="docs/banner.svg" alt="Whirlpool" width="800">
 
-# Whirlpool
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Real-Fruit-Snacks/Whirlpool/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-green.svg)](https://python.org/)
 [![Tests](https://img.shields.io/badge/Tests-107%20passing-brightgreen.svg)](#testing)
 [![CI](https://github.com/Real-Fruit-Snacks/Whirlpool/actions/workflows/ci.yml/badge.svg)](https://github.com/Real-Fruit-Snacks/Whirlpool/actions/workflows/ci.yml)
