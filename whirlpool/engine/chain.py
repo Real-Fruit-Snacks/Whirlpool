@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional, Callable
+from typing import Callable
 
-from .analyzer import ExploitationPath, Category, Confidence, Risk
+from .analyzer import Confidence, Risk
 
 
 @dataclass
@@ -89,7 +89,7 @@ class ChainDetector:
 
         return chains
 
-    def _detect_path_hijack_cron(self, results) -> Optional[AttackChain]:
+    def _detect_path_hijack_cron(self, results) -> AttackChain | None:
         """Detect PATH hijack via cron jobs."""
         cron_jobs = getattr(results, 'cron_jobs', [])
         writable_path = getattr(results, 'path_writable', [])
@@ -116,7 +116,7 @@ class ChainDetector:
             steps=[
                 ChainStep(
                     order=1,
-                    description=f"Identify writable directory in cron's PATH",
+                    description="Identify writable directory in cron's PATH",
                     commands=[
                         "echo $PATH",
                         f"# Writable directories found: {', '.join(writable_path[:3])}"
@@ -154,7 +154,7 @@ class ChainDetector:
             notes="Timing depends on cron schedule"
         )
 
-    def _detect_writable_script_cron(self, results) -> Optional[list[AttackChain]]:
+    def _detect_writable_script_cron(self, results) -> list[AttackChain] | None:
         """Detect writable cron script chains."""
         cron_jobs = getattr(results, 'cron_jobs', [])
         chains = []
@@ -202,7 +202,7 @@ class ChainDetector:
 
         return chains if chains else None
 
-    def _detect_docker_escape(self, results) -> Optional[AttackChain]:
+    def _detect_docker_escape(self, results) -> AttackChain | None:
         """Detect Docker container escape."""
         docker_info = getattr(results, 'docker', None)
         groups = getattr(results, 'current_groups', [])
@@ -278,7 +278,7 @@ class ChainDetector:
 
         return None
 
-    def _detect_lxd_escape(self, results) -> Optional[AttackChain]:
+    def _detect_lxd_escape(self, results) -> AttackChain | None:
         """Detect LXD/LXC container escape."""
         groups = getattr(results, 'current_groups', [])
         lxc_lxd = getattr(results, 'lxc_lxd', False)
@@ -336,7 +336,7 @@ class ChainDetector:
             complexity_score=40
         )
 
-    def _detect_nfs_suid_plant(self, results) -> Optional[list[AttackChain]]:
+    def _detect_nfs_suid_plant(self, results) -> list[AttackChain] | None:
         """Detect NFS no_root_squash SUID planting."""
         nfs_shares = getattr(results, 'nfs_no_root_squash', [])
         hostname = getattr(results, 'hostname', 'TARGET')
@@ -354,7 +354,7 @@ class ChainDetector:
                         order=1,
                         description="Mount NFS share on attacker machine (as root)",
                         commands=[
-                            f"# On attacker machine as root:",
+                            "# On attacker machine as root:",
                             "mkdir /tmp/nfs",
                             f"mount -o rw,vers=3 {hostname}:{share} /tmp/nfs"
                         ],
@@ -375,7 +375,7 @@ class ChainDetector:
                         order=3,
                         description="Execute SUID binary on target",
                         commands=[
-                            f"# On target:",
+                            "# On target:",
                             f"{share}/rootbash -p"
                         ],
                         output="Root shell"
@@ -390,7 +390,7 @@ class ChainDetector:
 
         return chains
 
-    def _detect_writable_passwd(self, results) -> Optional[AttackChain]:
+    def _detect_writable_passwd(self, results) -> AttackChain | None:
         """Detect writable /etc/passwd."""
         writable_files = getattr(results, 'writable_files', [])
 
@@ -447,7 +447,7 @@ class ChainDetector:
             complexity_score=10
         )
 
-    def _detect_writable_shadow(self, results) -> Optional[AttackChain]:
+    def _detect_writable_shadow(self, results) -> AttackChain | None:
         """Detect writable /etc/shadow."""
         writable_files = getattr(results, 'writable_files', [])
 
@@ -498,7 +498,7 @@ class ChainDetector:
             complexity_score=25
         )
 
-    def _detect_service_hijack(self, results) -> Optional[list[AttackChain]]:
+    def _detect_service_hijack(self, results) -> list[AttackChain] | None:
         """Detect writable service binaries."""
         # This applies to both Linux and Windows
         chains = []
@@ -542,7 +542,7 @@ class ChainDetector:
 
         return chains if chains else None
 
-    def _detect_library_hijack(self, results) -> Optional[AttackChain]:
+    def _detect_library_hijack(self, results) -> AttackChain | None:
         """Detect LD_PRELOAD or library path hijacking opportunities."""
         sudo_rights = getattr(results, 'sudo_rights', [])
 
@@ -597,7 +597,7 @@ class ChainDetector:
 
         return None
 
-    def _detect_ssh_key_access(self, results) -> Optional[list[AttackChain]]:
+    def _detect_ssh_key_access(self, results) -> list[AttackChain] | None:
         """Detect accessible SSH keys."""
         ssh_keys = getattr(results, 'ssh_keys', [])
 
@@ -619,7 +619,7 @@ class ChainDetector:
                         description="Copy and examine key",
                         commands=[
                             f"cat {key_path}",
-                            f"# Copy to attacker machine"
+                            "# Copy to attacker machine"
                         ]
                     ),
                     ChainStep(
@@ -650,7 +650,7 @@ class ChainDetector:
 
         return chains if chains else None
 
-    def _detect_wildcard_injection(self, results) -> Optional[list[AttackChain]]:
+    def _detect_wildcard_injection(self, results) -> list[AttackChain] | None:
         """Detect wildcard injection opportunities."""
         cron_jobs = getattr(results, 'cron_jobs', [])
         chains = []
@@ -728,9 +728,9 @@ class ChainDetector:
 
         return chains if chains else None
 
-    def _detect_sudo_path_injection(self, results) -> Optional[AttackChain]:
+    def _detect_sudo_path_injection(self, results) -> AttackChain | None:
         """Detect sudo without secure_path."""
-        sudo_rights = getattr(results, 'sudo_rights', [])
+        getattr(results, 'sudo_rights', [])
 
         # This requires checking if sudo uses secure_path
         # Usually detected in LinPEAS output

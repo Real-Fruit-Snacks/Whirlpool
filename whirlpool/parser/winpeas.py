@@ -8,8 +8,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
-
 
 # ANSI escape code pattern
 ANSI_PATTERN = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\x1b[^[]]')
@@ -82,7 +80,7 @@ class WinPEASResults:
 
     # User info
     current_user: str = ""
-    user_info: Optional[UserInfo] = None
+    user_info: UserInfo | None = None
     privileges: list[TokenPrivilege] = field(default_factory=list)
 
     # Services
@@ -95,7 +93,7 @@ class WinPEASResults:
 
     # Registry
     always_install_elevated: bool = False
-    autologon_creds: Optional[dict] = None
+    autologon_creds: dict | None = None
     interesting_registry: list[RegistryKey] = field(default_factory=list)
 
     # Credentials
@@ -125,7 +123,7 @@ class WinPEASParser:
     """Parser for WinPEAS enumeration output."""
 
     def __init__(self):
-        self.results = WinPEASResults()
+        self.results: WinPEASResults = WinPEASResults()
         self._section_content: dict[str, list[str]] = {}
 
     def parse(self, content: str) -> WinPEASResults:
@@ -372,7 +370,7 @@ class WinPEASParser:
             "SERVICE BINARY", "UNQUOTED SERVICE",
         )
 
-        current_service: Optional[ServiceInfo] = None
+        current_service: ServiceInfo | None = None
 
         for line in lines:
             line = line.strip()
@@ -438,7 +436,7 @@ class WinPEASParser:
         """Extract scheduled task information."""
         lines = self._get_section_lines("Scheduled", "Task", "schtasks")
 
-        current_task: Optional[ScheduledTaskInfo] = None
+        current_task: ScheduledTaskInfo | None = None
 
         for line in lines:
             line = line.strip()

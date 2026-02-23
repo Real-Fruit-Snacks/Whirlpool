@@ -7,15 +7,14 @@ from __future__ import annotations
 
 import logging
 import re
-
-from typing import Callable, Optional
+from typing import Callable
 
 from .winpeas import (
-    WinPEASResults,
-    ServiceInfo,
     ScheduledTaskInfo,
+    ServiceInfo,
     TokenPrivilege,
     UserInfo,
+    WinPEASResults,
 )
 
 
@@ -23,7 +22,7 @@ class ManualWindowsParser:
     """Parser for manual Windows enumeration command outputs."""
 
     def __init__(self):
-        self.results = WinPEASResults()
+        self.results: WinPEASResults = WinPEASResults()
 
     def parse_whoami(self, output: str) -> None:
         """Parse 'whoami' command output.
@@ -179,7 +178,7 @@ class ManualWindowsParser:
                 STATE              : 4  RUNNING
                 ...
         """
-        current_service: Optional[ServiceInfo] = None
+        current_service: ServiceInfo | None = None
 
         for line in output.strip().splitlines():
             line = line.strip()
@@ -221,7 +220,7 @@ class ManualWindowsParser:
         TaskName:      \\TaskName
         Task To Run:   C:\\path\\to\\binary.exe
         """
-        current_task: Optional[ScheduledTaskInfo] = None
+        current_task: ScheduledTaskInfo | None = None
 
         for line in output.strip().splitlines():
             line = line.strip()

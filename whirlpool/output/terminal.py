@@ -6,30 +6,25 @@ Theme: Catppuccin Mocha (https://catppuccin.com/palette/)
 
 from __future__ import annotations
 
-from typing import Optional
-
 try:
+    from rich.align import Align
+    from rich.box import ROUNDED
+    from rich.columns import Columns
     from rich.console import Console
+    from rich.padding import Padding
     from rich.panel import Panel
+    from rich.rule import Rule
     from rich.table import Table
     from rich.text import Text
-    from rich.box import ROUNDED, HEAVY, DOUBLE
-    from rich.style import Style
-    from rich.padding import Padding
     from rich.theme import Theme
-    from rich.rule import Rule
     from rich.tree import Tree
-    from rich.columns import Columns
-    from rich.align import Align
-    from rich import print as rprint
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
 
 from .. import __version__
-from ..engine.analyzer import ExploitationPath, Category, Confidence, Risk
-from ..engine.ranker import Ranker, RankingProfile
-
+from ..engine.analyzer import Category, Confidence, ExploitationPath, Risk
+from ..engine.ranker import Ranker
 
 # Catppuccin Mocha palette
 MOCHA = {
@@ -216,7 +211,7 @@ class TerminalOutput:
 
     def __init__(
         self,
-        console: Optional[Console] = None,
+        console: Console | None = None,
         no_color: bool = False,
         profile: str = "default",
     ):
@@ -247,8 +242,8 @@ class TerminalOutput:
 
     def print_header(
         self,
-        target_info: Optional[dict] = None,
-        paths: Optional[list[ExploitationPath]] = None,
+        target_info: dict | None = None,
+        paths: list[ExploitationPath] | None = None,
     ) -> None:
         """Print analysis header with branded banner and target information.
 
@@ -316,9 +311,9 @@ class TerminalOutput:
 
             profile_text.append("  ")
             profile_text.append(f"{len(paths)} paths found", style=MOCHA["text"])
-            profile_text.append(f" | ", style=MOCHA["surface2"])
+            profile_text.append(" | ", style=MOCHA["surface2"])
             profile_text.append(f"{high_conf} high confidence", style=MOCHA["green"])
-            profile_text.append(f" | ", style=MOCHA["surface2"])
+            profile_text.append(" | ", style=MOCHA["surface2"])
             profile_text.append(f"{low_risk} low risk", style=MOCHA["green"])
 
         self.console.print(profile_text)
@@ -510,12 +505,12 @@ class TerminalOutput:
             Confidence.LOW: MOCHA["red"],
             Confidence.THEORETICAL: MOCHA["overlay1"],
         }
-        for level in [Confidence.HIGH, Confidence.MEDIUM, Confidence.LOW, Confidence.THEORETICAL]:
-            count = by_confidence.get(level, 0)
+        for conf_level in [Confidence.HIGH, Confidence.MEDIUM, Confidence.LOW, Confidence.THEORETICAL]:
+            count = by_confidence.get(conf_level, 0)
             if count > 0:
-                color = conf_colors.get(level, MOCHA["text"])
+                color = conf_colors.get(conf_level, MOCHA["text"])
                 conf_table.add_row(
-                    level.value.upper(),
+                    conf_level.value.upper(),
                     f"[bold {color}]{count}[/bold {color}]",
                 )
 
@@ -536,12 +531,12 @@ class TerminalOutput:
             Risk.MEDIUM: MOCHA["yellow"],
             Risk.HIGH: MOCHA["red"],
         }
-        for level in [Risk.LOW, Risk.MEDIUM, Risk.HIGH]:
-            count = by_risk.get(level, 0)
+        for risk_level in [Risk.LOW, Risk.MEDIUM, Risk.HIGH]:
+            count = by_risk.get(risk_level, 0)
             if count > 0:
-                color = risk_colors.get(level, MOCHA["text"])
+                color = risk_colors.get(risk_level, MOCHA["text"])
                 risk_table.add_row(
-                    level.value.upper(),
+                    risk_level.value.upper(),
                     f"[bold {color}]{count}[/bold {color}]",
                 )
 
@@ -939,12 +934,12 @@ class TerminalOutput:
 
 def print_results(
     paths: list[ExploitationPath],
-    target_info: Optional[dict] = None,
+    target_info: dict | None = None,
     show_quick_wins: bool = True,
     show_all: bool = True,
     show_summary: bool = True,
     group_by_category: bool = True,
-    chains: Optional[list] = None,
+    chains: list | None = None,
     profile: str = "default",
 ) -> None:
     """Convenience function to print analysis results.

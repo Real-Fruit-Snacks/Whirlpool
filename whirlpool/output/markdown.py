@@ -7,9 +7,8 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
-from ..engine.analyzer import ExploitationPath, Category, Confidence, Risk
+from ..engine.analyzer import Confidence, ExploitationPath, Risk
 from ..engine.chain import AttackChain
 from ..engine.ranker import Ranker
 
@@ -23,8 +22,8 @@ class MarkdownOutput:
     def generate(
         self,
         paths: list[ExploitationPath],
-        chains: Optional[list[AttackChain]] = None,
-        target_info: Optional[dict] = None,
+        chains: list[AttackChain] | None = None,
+        target_info: dict | None = None,
         include_toc: bool = True
     ) -> str:
         """Generate full markdown report.
@@ -83,13 +82,13 @@ class MarkdownOutput:
         content = self.generate(paths, **kwargs)
         Path(output_path).write_text(content)
 
-    def _generate_header(self, target_info: Optional[dict]) -> str:
+    def _generate_header(self, target_info: dict | None) -> str:
         """Generate report header."""
         lines = [
             "# Privilege Escalation Analysis Report",
             "",
             f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"**Tool:** Whirlpool Privilege Escalation Analyzer",
+            "**Tool:** Whirlpool Privilege Escalation Analyzer",
         ]
 
         if target_info:
@@ -112,7 +111,7 @@ class MarkdownOutput:
     def _generate_toc(
         self,
         paths: list[ExploitationPath],
-        chains: Optional[list[AttackChain]]
+        chains: list[AttackChain] | None
     ) -> str:
         """Generate table of contents."""
         lines = [
@@ -129,7 +128,7 @@ class MarkdownOutput:
             lines.append("3. [Detailed Findings](#detailed-findings)")
 
         # Add category sections
-        categories = set(p.category for p in paths)
+        categories = {p.category for p in paths}
         for cat in sorted(categories, key=lambda c: c.value):
             anchor = cat.value.lower().replace("_", "-")
             lines.append(f"   - [{cat.value.upper()}](#{anchor})")
@@ -143,7 +142,7 @@ class MarkdownOutput:
         # Count by confidence and risk
         high_conf = sum(1 for p in paths if p.confidence == Confidence.HIGH)
         low_risk = sum(1 for p in paths if p.risk == Risk.LOW)
-        categories = set(p.category for p in paths)
+        categories = {p.category for p in paths}
 
         lines = [
             "## Executive Summary",
@@ -195,9 +194,9 @@ class MarkdownOutput:
                 f"{path.description}",
                 "",
                 "**Finding:**",
-                f"```",
+                "```",
                 f"{path.finding}",
-                f"```",
+                "```",
                 "",
             ])
 
@@ -279,18 +278,18 @@ class MarkdownOutput:
                 lines.extend([
                     f"#### {path.technique_name}",
                     "",
-                    f"| Metric | Value |",
-                    f"|--------|-------|",
+                    "| Metric | Value |",
+                    "|--------|-------|",
                     f"| Score | {score:.0f}/100 |",
                     f"| Confidence | {path.confidence.value} |",
                     f"| Risk | {path.risk.value} |",
                     "",
                     f"**Description:** {path.description}",
                     "",
-                    f"**Finding:**",
-                    f"```",
+                    "**Finding:**",
+                    "```",
                     f"{path.finding}",
-                    f"```",
+                    "```",
                     "",
                 ])
 
@@ -323,7 +322,7 @@ class MarkdownOutput:
 
         return "\n".join(lines)
 
-    def _generate_appendix(self, target_info: Optional[dict]) -> str:
+    def _generate_appendix(self, target_info: dict | None) -> str:
         """Generate appendix."""
         lines = [
             "## Appendix",

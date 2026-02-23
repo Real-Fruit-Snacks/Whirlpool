@@ -9,7 +9,6 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-
 # ANSI escape code pattern - handles all common sequences
 ANSI_PATTERN = re.compile(r'\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07|\x1b[^[]]')
 
@@ -186,7 +185,7 @@ class LinPEASParser:
     """Parser for LinPEAS enumeration output."""
 
     def __init__(self):
-        self.results = LinPEASResults()
+        self.results: LinPEASResults = LinPEASResults()
         self._current_section = ""
         self._current_subsection = ""
         self._section_content: dict[str, list[str]] = {}
@@ -353,8 +352,8 @@ class LinPEASParser:
             path, cap_str = match.groups()
             caps = re.findall(r'cap_\w+', cap_str.lower())
             if caps and not any(c.path == path for c in self.results.capabilities):
-                entry = CapabilityEntry(path=path, capabilities=caps, cap_string=cap_str)
-                self.results.capabilities.append(entry)
+                cap_entry = CapabilityEntry(path=path, capabilities=caps, cap_string=cap_str)
+                self.results.capabilities.append(cap_entry)
 
         # Extract sudo rights - only match valid sudo runas specs
         # Valid runas: (root), (ALL), (ALL : ALL), (user : group), (pepper : ALL)
@@ -371,15 +370,15 @@ class LinPEASParser:
             # Filter noise: skip version-like patterns e.g. (03-2006)/Solaris_8
             if re.match(r'\d{2}-\d{4}$', runas):
                 continue
-            entry = SudoEntry(
+            sudo_entry = SudoEntry(
                 user=self.results.current_user,
                 runas=runas,
                 commands=[command],
                 nopasswd=bool(nopasswd),
                 raw_line=match.group(0)
             )
-            if not any(s.raw_line == entry.raw_line for s in self.results.sudo_rights):
-                self.results.sudo_rights.append(entry)
+            if not any(s.raw_line == sudo_entry.raw_line for s in self.results.sudo_rights):
+                self.results.sudo_rights.append(sudo_entry)
 
         # Check for docker group
         if 'docker' in self.results.current_groups:

@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from whirlpool.parser.linpeas import LinPEASResults
@@ -92,7 +92,7 @@ class ExploitationPath:
 class Analyzer:
     """Analyzes enumeration results and generates exploitation paths."""
 
-    def __init__(self, data_dir: Optional[Path] = None):
+    def __init__(self, data_dir: Path | None = None):
         """Initialize analyzer with knowledge bases.
 
         Args:
@@ -222,7 +222,7 @@ class Analyzer:
                 path = ExploitationPath(
                     category=Category.SUID,
                     technique_name=f"SUID {binary_name} (Unknown)",
-                    description=f"SUID binary not in GTFOBins - may have custom exploitation path",
+                    description="SUID binary not in GTFOBins - may have custom exploitation path",
                     finding=suid.path,
                     commands=[f"# Investigate: {suid.path}", "strings {suid.path}", "ltrace {suid.path}"],
                     confidence=Confidence.LOW,
@@ -394,7 +394,7 @@ class Analyzer:
                 path = ExploitationPath(
                     category=Category.CRON,
                     technique_name="Writable Cron Script",
-                    description=f"Cron job executes writable script",
+                    description="Cron job executes writable script",
                     finding=f"{cron.schedule} {cron.command}",
                     commands=[
                         f"# Script is writable: {cron.command}",
@@ -467,7 +467,7 @@ class Analyzer:
 
     def _analyze_kernel_linux(self, results: LinPEASResults) -> list[ExploitationPath]:
         """Analyze kernel version for known exploits."""
-        paths = []
+        paths: list[ExploitationPath] = []
 
         kernel_version = getattr(results, 'kernel_version', '')
         if not kernel_version:
@@ -529,7 +529,7 @@ class Analyzer:
 
     def _analyze_docker(self, results: LinPEASResults) -> list[ExploitationPath]:
         """Analyze Docker-related escalation paths."""
-        paths = []
+        paths: list[ExploitationPath] = []
 
         docker_info = getattr(results, 'docker', None)
         if not docker_info:
@@ -615,7 +615,7 @@ class Analyzer:
                 description="NFS share with no_root_squash allows root file creation",
                 finding=nfs_path,
                 commands=[
-                    f"# On attacker (as root):",
+                    "# On attacker (as root):",
                     f"mount -o rw {getattr(results, 'hostname', 'TARGET')}:{nfs_path} /mnt",
                     "cp /bin/bash /mnt/rootbash",
                     "chmod +s /mnt/rootbash",
@@ -665,7 +665,7 @@ class Analyzer:
                             category=Category.POTATO,
                             technique_name=potato_name,
                             description=potato.get("description", "Token impersonation attack"),
-                            finding=f"SeImpersonatePrivilege/SeAssignPrimaryTokenPrivilege enabled",
+                            finding="SeImpersonatePrivilege/SeAssignPrimaryTokenPrivilege enabled",
                             commands=potato.get("commands", []),
                             prerequisites=potato.get("requirements", []),
                             confidence=Confidence.HIGH,
@@ -696,7 +696,7 @@ class Analyzer:
                     finding=service.binary_path,
                     commands=[
                         f"# Backup original: copy \"{service.binary_path}\" \"{service.binary_path}.bak\"",
-                        f"# Replace with malicious binary",
+                        "# Replace with malicious binary",
                         f"copy payload.exe \"{service.binary_path}\"",
                         f"sc stop {service.name}",
                         f"sc start {service.name}"
@@ -786,7 +786,7 @@ class Analyzer:
 
     def _analyze_kernel_windows(self, results: WinPEASResults) -> list[ExploitationPath]:
         """Analyze Windows version for kernel exploits."""
-        paths = []
+        paths: list[ExploitationPath] = []
 
         os_version = getattr(results, 'os_version', '')
         build_number = getattr(results, 'build_number', '')
@@ -859,7 +859,7 @@ class Analyzer:
 
         # AutoLogon credentials
         if getattr(results, 'autologon_creds', None):
-            creds = results.autologon_creds
+            creds: dict = results.autologon_creds  # type: ignore[assignment]
             path = ExploitationPath(
                 category=Category.CREDENTIALS,
                 technique_name="AutoLogon Credentials",

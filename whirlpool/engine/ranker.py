@@ -7,9 +7,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
-from .analyzer import ExploitationPath, Category, Confidence, Risk
+from .analyzer import Category, Confidence, ExploitationPath, Risk
 
 
 class RankingProfile(Enum):
@@ -101,7 +100,7 @@ class Ranker:
     def __init__(
         self,
         profile: RankingProfile = RankingProfile.DEFAULT,
-        custom_weights: Optional[RankingWeights] = None
+        custom_weights: RankingWeights | None = None
     ):
         """Initialize ranker with scoring profile.
 
@@ -116,9 +115,9 @@ class Ranker:
         self,
         paths: list[ExploitationPath],
         quick_wins_only: bool = False,
-        min_confidence: Optional[Confidence] = None,
-        max_risk: Optional[Risk] = None,
-        categories: Optional[list[Category]] = None
+        min_confidence: Confidence | None = None,
+        max_risk: Risk | None = None,
+        categories: list[Category] | None = None
     ) -> list[ExploitationPath]:
         """Rank exploitation paths by composite score.
 
@@ -241,7 +240,7 @@ class Ranker:
     def get_score_breakdown(
         self,
         path: ExploitationPath
-    ) -> dict[str, float]:
+    ) -> dict[str, float | dict[str, float]]:
         """Get detailed score breakdown for a path.
 
         Args:
@@ -273,9 +272,9 @@ class Ranker:
     def _filter_paths(
         self,
         paths: list[ExploitationPath],
-        min_confidence: Optional[Confidence] = None,
-        max_risk: Optional[Risk] = None,
-        categories: Optional[list[Category]] = None
+        min_confidence: Confidence | None = None,
+        max_risk: Risk | None = None,
+        categories: list[Category] | None = None
     ) -> list[ExploitationPath]:
         """Filter paths based on criteria."""
         result = paths

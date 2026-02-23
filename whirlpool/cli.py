@@ -8,16 +8,13 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Optional
 
 from . import __version__
+from .engine.analyzer import Analyzer
+from .engine.chain import ChainDetector
+from .engine.ranker import Ranker, RankingProfile
 from .parser.linpeas import LinPEASParser
 from .parser.winpeas import WinPEASParser
-from .parser.manual_linux import ManualLinuxParser
-from .parser.manual_windows import ManualWindowsParser
-from .engine.analyzer import Analyzer
-from .engine.ranker import Ranker, RankingProfile
-from .engine.chain import ChainDetector
 
 
 def detect_input_type(content: str) -> str:
@@ -60,7 +57,7 @@ def detect_input_type(content: str) -> str:
     return 'unknown'
 
 
-def parse_input(file_path: Path, input_type: Optional[str] = None):
+def parse_input(file_path: Path, input_type: str | None = None):
     """Parse input file and return results.
 
     Args:
@@ -88,26 +85,21 @@ def parse_input(file_path: Path, input_type: Optional[str] = None):
 
     # Parse based on type
     if input_type == 'linpeas':
-        parser = LinPEASParser()
-        return parser.parse(content), 'linux'
+        return LinPEASParser().parse(content), 'linux'
     elif input_type == 'winpeas':
-        parser = WinPEASParser()
-        return parser.parse(content), 'windows'
+        return WinPEASParser().parse(content), 'windows'
     elif input_type == 'manual_linux':
         # Use LinPEAS parser which handles arbitrary Linux enumeration output
-        parser = LinPEASParser()
-        return parser.parse(content), 'linux'
+        return LinPEASParser().parse(content), 'linux'
     elif input_type == 'manual_windows':
         # Use WinPEAS parser which handles arbitrary Windows enumeration output
-        parser = WinPEASParser()
-        return parser.parse(content), 'windows'
+        return WinPEASParser().parse(content), 'windows'
     else:
         # Try LinPEAS parser as default
-        parser = LinPEASParser()
-        return parser.parse(content), 'linux'
+        return LinPEASParser().parse(content), 'linux'
 
 
-def main(args: Optional[list[str]] = None) -> int:
+def main(args: list[str] | None = None) -> int:
     """Main CLI entry point.
 
     Args:
@@ -322,7 +314,7 @@ Examples:
                     print(f"    {path.description}")
                     print(f"    Finding: {path.finding}")
                     if path.commands:
-                        print(f"    Commands:")
+                        print("    Commands:")
                         for cmd in path.commands[:3]:
                             print(f"      {cmd}")
                     print()
@@ -330,8 +322,8 @@ Examples:
         elif parsed_args.format == 'markdown':
             from .output.markdown import MarkdownOutput
 
-            output = MarkdownOutput()
-            content = output.generate(paths, chains=chains, target_info=target_info)
+            md_output = MarkdownOutput()
+            content = md_output.generate(paths, chains=chains, target_info=target_info)
 
             if parsed_args.output:
                 parsed_args.output.write_text(content)
@@ -342,8 +334,8 @@ Examples:
         elif parsed_args.format == 'json':
             from .output.json_out import JSONOutput
 
-            output = JSONOutput()
-            content = output.to_json(paths, chains=chains, target_info=target_info)
+            json_output = JSONOutput()
+            content = json_output.to_json(paths, chains=chains, target_info=target_info)
 
             if parsed_args.output:
                 parsed_args.output.write_text(content)

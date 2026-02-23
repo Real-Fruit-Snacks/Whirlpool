@@ -6,12 +6,11 @@ Generates structured JSON for programmatic use.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from ..engine.analyzer import ExploitationPath, Category, Confidence, Risk
+from ..engine.analyzer import ExploitationPath
 from ..engine.chain import AttackChain
 from ..engine.ranker import Ranker
 
@@ -25,8 +24,8 @@ class JSONOutput:
     def generate(
         self,
         paths: list[ExploitationPath],
-        chains: Optional[list[AttackChain]] = None,
-        target_info: Optional[dict] = None,
+        chains: list[AttackChain] | None = None,
+        target_info: dict | None = None,
         include_scores: bool = True,
         include_raw: bool = False
     ) -> dict:
@@ -123,9 +122,9 @@ class JSONOutput:
 
     def _generate_summary(self, paths: list[ExploitationPath]) -> dict:
         """Generate summary statistics."""
-        by_confidence = {}
-        by_risk = {}
-        by_category = {}
+        by_confidence: dict[str, int] = {}
+        by_risk: dict[str, int] = {}
+        by_category: dict[str, int] = {}
 
         for path in paths:
             # Confidence
@@ -155,7 +154,7 @@ class JSONOutput:
         include_scores: bool = True
     ) -> dict:
         """Convert ExploitationPath to dictionary."""
-        result = {
+        result: dict[str, Any] = {
             "category": path.category.value,
             "technique_name": path.technique_name,
             "description": path.description,
@@ -210,7 +209,7 @@ class JSONOutput:
 
 def export_json(
     paths: list[ExploitationPath],
-    output_path: Optional[str | Path] = None,
+    output_path: str | Path | None = None,
     **kwargs
 ) -> str | None:
     """Convenience function to export paths to JSON.

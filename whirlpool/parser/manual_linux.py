@@ -7,14 +7,15 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 
 from .linpeas import (
-    LinPEASResults,
-    SUIDEntry,
     CapabilityEntry,
     CronEntry,
-    SudoEntry,
+    LinPEASResults,
     NetworkService,
+    SudoEntry,
+    SUIDEntry,
     UserInfo,
 )
 
@@ -23,7 +24,7 @@ class ManualLinuxParser:
     """Parser for manual Linux enumeration command outputs."""
 
     def __init__(self):
-        self.results = LinPEASResults()
+        self.results: LinPEASResults = LinPEASResults()
 
     def parse_id(self, output: str) -> None:
         """Parse 'id' command output.
@@ -331,7 +332,7 @@ class ManualLinuxParser:
         Returns:
             LinPEASResults with all parsed data
         """
-        parsers = {
+        parsers: dict[str, Callable[[str], None]] = {
             'id': self.parse_id,
             'whoami': self.parse_whoami,
             'groups': self.parse_groups,
