@@ -41,3 +41,11 @@ Thumbs.db
 CLAUDE.md
 .omc/
 .claude/
+
+# Development artifacts
+CODE_REVIEW*.md
+IMPROVEMENTS.md
+Look and Feel.png
+
+# Linting cache
+.ruff_cache/
