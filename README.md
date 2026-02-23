@@ -4,6 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Real-Fruit-Snacks/Whirlpool/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-green.svg)](https://python.org/)
+[![pipx](https://img.shields.io/badge/install-pipx-blue.svg)](https://pipx.pypa.io/)
 [![Tests](https://img.shields.io/badge/Tests-237%20passing-brightgreen.svg)](#testing)
 [![CI](https://github.com/Real-Fruit-Snacks/Whirlpool/actions/workflows/ci.yml/badge.svg)](https://github.com/Real-Fruit-Snacks/Whirlpool/actions/workflows/ci.yml)
 
@@ -124,16 +125,37 @@ Rich terminal output with Catppuccin Mocha theming, Markdown report generation f
 | Requirement | Version |
 |-------------|---------|
 | Python | >= 3.9 |
-| pip | any |
+| pip or pipx | any |
 | Platform | Linux, macOS, or Windows |
 
-### Install & Run
+### Install
+
+#### pipx (Recommended)
+
+[pipx](https://pipx.pypa.io/) installs Whirlpool in an isolated environment, keeping your system Python clean.
 
 ```bash
+# Install directly from GitHub
+pipx install git+https://github.com/Real-Fruit-Snacks/Whirlpool.git
+
+# Or from a local clone
+git clone https://github.com/Real-Fruit-Snacks/Whirlpool.git
+pipx install ./Whirlpool
+```
+
+#### pip
+
+```bash
+# Install from GitHub
+pip install git+https://github.com/Real-Fruit-Snacks/Whirlpool.git
+
+# Or clone and install in development mode
 git clone https://github.com/Real-Fruit-Snacks/Whirlpool.git
 cd Whirlpool
 pip install -e .
 ```
+
+### Run
 
 ```bash
 # Analyze LinPEAS output (auto-detected)
@@ -420,6 +442,9 @@ win_paths = analyzer.analyze_windows(win_results)
 ## Testing
 
 ```bash
+# Clone and install with dev dependencies
+git clone https://github.com/Real-Fruit-Snacks/Whirlpool.git
+cd Whirlpool
 pip install -e ".[dev]"
 
 # Run all 237 tests

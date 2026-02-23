@@ -1335,7 +1335,7 @@
     <span class="section-label">// quickstart</span>
     <h2 class="section-title">Running in 30 seconds</h2>
     <p class="section-desc">
-      Clone, install, run. No Docker, no build step, no configuration files. Python 3.9+ is the only requirement.
+      One command to install, one command to run. No Docker, no build step, no configuration files. Python 3.9+ is the only requirement.
     </p>
 
     <div class="start-row">
@@ -1348,16 +1348,16 @@
         </div>
         <div class="start-body">
           <div class="start-line">
-            <span class="comment"># Clone and install</span>
-          </div>
-          <div class="start-line">
-            <span class="prompt">$</span> <span class="cmd">git clone</span> <span class="arg">https://github.com/Real-Fruit-Snacks/Whirlpool.git</span>
-          </div>
-          <div class="start-line">
-            <span class="prompt">$</span> <span class="cmd">cd</span> <span class="arg">Whirlpool</span>
+            <span class="comment"># Install with pipx (recommended)</span>
           </div>
           <div class="start-line" style="margin-bottom:16px;">
-            <span class="prompt">$</span> <span class="cmd">pip install</span> <span class="flag">-e</span> <span class="arg">.</span>
+            <span class="prompt">$</span> <span class="cmd">pipx install</span> <span class="arg">git+https://github.com/Real-Fruit-Snacks/Whirlpool.git</span>
+          </div>
+          <div class="start-line">
+            <span class="comment"># Or install with pip</span>
+          </div>
+          <div class="start-line" style="margin-bottom:16px;">
+            <span class="prompt">$</span> <span class="cmd">pip install</span> <span class="arg">git+https://github.com/Real-Fruit-Snacks/Whirlpool.git</span>
           </div>
           <div class="start-line">
             <span class="comment"># Analyze enumeration output</span>
@@ -1387,6 +1387,9 @@
       </div>
 
       <div class="start-info">
+      <p>
+        <strong style="color:var(--ctp-text);">pipx</strong> is the recommended install method -- it creates an isolated environment and keeps your system Python clean. <a href="https://pipx.pypa.io/" style="color:var(--ctp-blue);">Install pipx</a> if you don't have it yet.
+      </p>
       <p>
         Point Whirlpool at any enumeration output file. It auto-detects the format, parses the findings, matches them against offline knowledge bases, and outputs a ranked exploitation playbook.
       </p>
