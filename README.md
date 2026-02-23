@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Real-Fruit-Snacks/Whirlpool/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-green.svg)](https://python.org/)
-[![Tests](https://img.shields.io/badge/Tests-107%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/Tests-237%20passing-brightgreen.svg)](#testing)
 [![CI](https://github.com/Real-Fruit-Snacks/Whirlpool/actions/workflows/ci.yml/badge.svg)](https://github.com/Real-Fruit-Snacks/Whirlpool/actions/workflows/ci.yml)
 
 <br>
@@ -81,7 +81,7 @@ Feed Whirlpool any enumeration file and it figures out the format. Handles LinPE
 <td width="50%">
 
 ### Offline Knowledge Bases
-246 GTFOBins entries, 39 LOLBAS binaries, 18 kernel exploits with version ranges, and 9 potato attacks with OS compatibility matrices. Everything runs locally — no API calls, no internet required.
+329 GTFOBins entries, 86 LOLBAS binaries, 42 kernel exploits with version ranges, and 9 potato attacks with OS compatibility matrices. Everything runs locally — no API calls, no internet required.
 
 </td>
 </tr>
@@ -156,28 +156,52 @@ whirlpool enum.txt --format json --output results.json
 
 # Filter by confidence and risk
 whirlpool enum.txt --min-confidence medium --max-risk medium
+
+# Substitute attacker IP/port into commands
+whirlpool enum.txt --lhost 10.10.14.1 --lport 4444
+
+# Compare two scans (diff mode)
+whirlpool first_scan.txt --diff second_scan.txt
+
+# Read from stdin / pipe
+cat linpeas.txt | whirlpool
+whirlpool -
+
+# Filter by category
+whirlpool enum.txt --categories suid,sudo,docker
+
+# List knowledge base contents
+whirlpool --list-techniques
 ```
 
 ### CLI Reference
 
 ```
 whirlpool [-h] [-t TYPE] [-f FORMAT] [-o OUTPUT] [-p PROFILE]
-          [--quick-wins] [--no-chains] [--no-color]
-          [--min-confidence LEVEL] [--max-risk LEVEL] [-v] [--version]
-          input
+          [--categories CAT[,CAT...]] [--quick-wins] [--no-chains]
+          [--no-color] [--min-confidence LEVEL] [--max-risk LEVEL]
+          [--lhost IP] [--lport PORT] [--diff SECOND_FILE]
+          [--list-techniques] [-v] [--version]
+          [input]
 ```
 
 | Flag | Values | Default | Description |
 |------|--------|---------|-------------|
+| `input` | file path, `-`, or omit for pipe | | Input file (`-` for stdin, omit when piping) |
 | `-t, --type` | `auto`, `linpeas`, `winpeas`, `manual_linux`, `manual_windows` | `auto` | Input format |
 | `-f, --format` | `terminal`, `markdown`, `json` | `terminal` | Output format |
 | `-o, --output` | file path | stdout | Output file |
 | `-p, --profile` | `default`, `oscp`, `ctf`, `stealth`, `safe` | `default` | Ranking profile |
+| `--categories` | comma-separated category names | all | Filter to specific categories |
 | `--quick-wins` | | | Show top 5 techniques only |
 | `--no-chains` | | | Disable multi-step chain detection |
 | `--no-color` | | | Plain text output |
 | `--min-confidence` | `theoretical`, `low`, `medium`, `high` | | Filter floor |
 | `--max-risk` | `low`, `medium`, `high` | | Filter ceiling |
+| `--lhost` | IP address | | Substitute ATTACKER_IP/LHOST placeholders |
+| `--lport` | port number | | Substitute LPORT/ATTACKER_PORT placeholders |
+| `--diff` | file path | | Compare two scans, show new/removed findings |
+| `--list-techniques` | | | Print knowledge base summary and exit |
 | `-v, --verbose` | | | Verbose diagnostics |
 
 ---
@@ -199,10 +223,10 @@ whirlpool/
 │   ├── ranker.py             # Composite scoring with 5 ranking profiles
 │   └── chain.py              # Multi-step attack chain detection (12 chain types)
 ├── data/
-│   ├── gtfobins.json         # 246 Unix binaries — SUID, sudo, capabilities techniques
-│   ├── kernel_exploits.json  # 18 Linux + Windows kernel exploits with version ranges
+│   ├── gtfobins.json         # 329 Unix binaries — SUID, sudo, capabilities, file_read, file_write, shell
+│   ├── kernel_exploits.json  # 42 Linux + Windows kernel exploits with version ranges
 │   ├── potato_matrix.json    # 9 potato attacks with OS compatibility matrix
-│   └── lolbas.json           # 39 Windows LOLBAS binaries and techniques
+│   └── lolbas.json           # 86 Windows LOLBAS binaries and techniques
 ├── output/
 │   ├── terminal.py           # Rich terminal output with Catppuccin Mocha theme
 │   ├── markdown.py           # Markdown report generator
@@ -248,10 +272,20 @@ whirlpool/
 | **LinPEAS parsing** | SUID, SGID, capabilities, sudo, cron, NFS, Docker, kernel version, SSH keys |
 | **WinPEAS parsing** | Privileges, services, scheduled tasks, missing patches, user info, network |
 | **Sudo noise filtering** | Rejects grep artifacts, version patterns, and common false-positive words |
-| **GTFOBins matching** | Matches SUID/sudo/capability binaries against 246 known-exploitable entries |
-| **LOLBAS matching** | Matches Windows binaries against 39 living-off-the-land techniques |
-| **Kernel exploit matching** | Version-range matching against 18 Linux/Windows kernel CVEs |
+| **GTFOBins matching** | Matches SUID/sudo/capability binaries against 329 known-exploitable entries (incl. file_read, file_write, shell) |
+| **LOLBAS matching** | Matches Windows binaries against 86 living-off-the-land techniques |
+| **Kernel exploit matching** | Version-range matching against 42 Linux/Windows kernel CVEs (2015-2025) |
 | **Potato attack selection** | OS-aware recommendation from 9 potato variants |
+| **Token privilege analysis** | SeBackup, SeDebug, SeLoadDriver, SeRestore, SeTakeOwnership exploitation paths |
+| **Credential analysis** | SSH key, password file, and config file detection with exploitation commands |
+| **Network service analysis** | Internal-only service detection with port forwarding commands (SSH, chisel, socat) |
+| **Writable file analysis** | /etc/passwd, /etc/shadow, /etc/sudoers, /etc/crontab, systemd units exploitation |
+| **Group membership analysis** | disk, adm, shadow, staff, video, root, wheel, sudo, admin group exploitation |
+| **SGID binary analysis** | Cross-references GTFOBins and flags high-value group ownership |
+| **DLL hijacking** | Detects services with writable binary directories on Windows |
+| **UAC bypass detection** | fodhelper, eventvwr, sdclt, computerdefaults techniques on medium-integrity Admin |
+| **Missing patch mapping** | Maps MS16-032, MS14-058, MS15-051, MS10-059, etc. to exploit commands |
+| **AD/Kerberos suggestions** | Kerberoasting, AS-REP Roasting, BloodHound enumeration for domain-joined hosts |
 | **Attack chain detection** | 12 multi-step chain types (PATH hijack, Docker escape, NFS plant, etc.) |
 | **Composite scoring** | Four-dimension weighted scoring (reliability, safety, simplicity, stealth) |
 | **5 ranking profiles** | Default, OSCP, CTF, stealth, safe — each shifts scoring weights |
@@ -260,6 +294,10 @@ whirlpool/
 | **Markdown reports** | Full analysis report with techniques, commands, and references |
 | **JSON export** | Structured output for tool integration and automation |
 | **Confidence/risk filtering** | Filter results by confidence floor and risk ceiling |
+| **Category filtering** | Filter results to specific categories (suid, sudo, docker, etc.) |
+| **Placeholder substitution** | `--lhost`/`--lport` replaces ATTACKER_IP and LPORT in all commands |
+| **Diff mode** | Compare two enum scans and show new/removed findings |
+| **Stdin/pipe support** | Read from stdin via `-` or auto-detected pipe input |
 
 ---
 
@@ -269,40 +307,45 @@ Whirlpool ships with four offline knowledge bases in `whirlpool/data/`:
 
 | File | Entries | Source | Contents |
 |------|---------|--------|----------|
-| `gtfobins.json` | 246 binaries | [GTFOBins](https://gtfobins.github.io/) | SUID, sudo, and capabilities exploitation commands per binary |
-| `kernel_exploits.json` | 18 CVEs | Various | Linux + Windows kernel exploits with affected version ranges, commands, reliability ratings |
-| `lolbas.json` | 39 binaries | [LOLBAS](https://lolbas-project.github.io/) | Windows living-off-the-land techniques (execute, download, etc.) |
+| `gtfobins.json` | 329 binaries | [GTFOBins](https://gtfobins.github.io/) | SUID, sudo, capabilities, file_read, file_write, shell exploitation commands |
+| `kernel_exploits.json` | 42 CVEs | Various | 23 Linux + 19 Windows kernel exploits with affected version ranges, commands, reliability ratings |
+| `lolbas.json` | 86 binaries | [LOLBAS](https://lolbas-project.github.io/) | Windows living-off-the-land techniques (execute, download, etc.) |
 | `potato_matrix.json` | 9 attacks | Various | Potato attack variants with OS compatibility matrix and decision logic |
 
 ### Supported Techniques
 
 #### Linux
 
-- SUID/SGID binary exploitation
+- SUID/SGID binary exploitation (GTFOBins cross-reference)
 - Linux capabilities abuse (cap_setuid, cap_dac_override, etc.)
-- Sudo privilege escalation (GTFOBins lookup + NOPASSWD detection)
+- Sudo privilege escalation (GTFOBins lookup + NOPASSWD + LD_PRELOAD + wildcard + argument escape)
 - Cron job manipulation (writable scripts, relative paths)
 - PATH hijacking via cron
 - Wildcard injection (tar, rsync)
 - Docker group escape / Docker socket abuse
 - LXD/LXC container escape
 - NFS no_root_squash SUID planting
-- Kernel exploits (DirtyPipe, DirtyCOW, PwnKit, etc.)
-- LD_PRELOAD injection via sudo env_keep
-- Writable /etc/passwd and /etc/shadow
+- Kernel exploits (DirtyPipe, DirtyCOW, PwnKit, Baron Samedit, etc.)
+- Credential/password file analysis (SSH keys, config files)
+- Network service analysis (internal-only services with port forwarding commands)
+- Writable sensitive files (/etc/passwd, /etc/shadow, /etc/sudoers, /etc/crontab, systemd units)
+- Dangerous group membership (disk, adm, shadow, staff, video, root, wheel, sudo)
 
 #### Windows
 
-- Token privilege abuse (SeImpersonate, SeAssignPrimaryToken, SeDebug, etc.)
+- Token privilege abuse (SeImpersonate, SeBackup, SeDebug, SeLoadDriver, SeRestore, SeTakeOwnership)
 - Potato attacks (PrintSpoofer, GodPotato, JuicyPotato, SweetPotato, etc.)
 - Service binary replacement
 - Unquoted service paths
 - Weak service permissions
+- DLL hijacking (writable service binary directories)
 - Scheduled task hijacking
 - Registry exploitation (AlwaysInstallElevated, AutoLogon credentials)
+- UAC bypass detection (fodhelper, eventvwr, sdclt, computerdefaults)
 - Kernel exploits (PrintNightmare, EternalBlue, MS16-032, etc.)
-- Missing patch detection (MS-series patches)
+- Missing patch-to-exploit mapping (MS16-032, MS14-058, MS15-051, MS10-059, etc.)
 - LOLBAS techniques
+- AD/Kerberos suggestions (Kerberoasting, AS-REP Roasting, BloodHound)
 
 ---
 
@@ -319,7 +362,7 @@ Each exploitation path is scored across four dimensions, then combined with prof
 
 Additional adjustments are applied based on:
 
-- **Category bonuses**: Sudo (+10), SUID (+5), credentials (+10), Docker (+5), kernel (-10)
+- **Category bonuses**: Sudo (+10), SUID (+5), credentials (+10), Docker (+5), writable_file (+10), group (+5), UAC (+5), kernel (-10)
 - **Confidence level**: High (+15 reliability, +10 simplicity) down to theoretical (-30, -20)
 - **Risk level**: Low (+15 safety, +10 stealth) vs high (-20, -15)
 
@@ -379,7 +422,7 @@ win_paths = analyzer.analyze_windows(win_results)
 ```bash
 pip install -e ".[dev]"
 
-# Run all 107 tests
+# Run all 237 tests
 python -m pytest tests/ -v
 
 # Run specific test file

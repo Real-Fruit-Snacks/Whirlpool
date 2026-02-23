@@ -2,6 +2,10 @@
 
 Provides formatted, color-coded terminal output using the Rich library.
 Theme: Catppuccin Mocha (https://catppuccin.com/palette/)
+
+Design matches the landing page mockup (docs/index.html) — bordered section
+panels, compact score badges, outlined confidence/risk pills, and unified
+dark command blocks.
 """
 
 from __future__ import annotations
@@ -10,7 +14,7 @@ try:
     from rich.align import Align
     from rich.box import ROUNDED
     from rich.columns import Columns
-    from rich.console import Console
+    from rich.console import Console, Group, RenderableType
     from rich.padding import Padding
     from rich.panel import Panel
     from rich.rule import Rule
@@ -136,6 +140,25 @@ CATEGORY_COLORS = {
 }
 
 
+# ── Badge / display helpers ──────────────────────────────────────────────
+
+
+def _score_badge(score: float) -> Text:
+    """Render a score as a compact colored pill: e.g. ``[95]``."""
+    if score >= 80:
+        color = MOCHA["green"]
+    elif score >= 60:
+        color = MOCHA["yellow"]
+    elif score >= 40:
+        color = MOCHA["peach"]
+    else:
+        color = MOCHA["red"]
+
+    badge = Text()
+    badge.append(f" {score:.0f} ", style=f"bold {MOCHA['crust']} on {color}")
+    return badge
+
+
 def _score_bar(score: float, width: int = 20) -> Text:
     """Build a colored progress bar for a score value (0-100).
 
@@ -144,7 +167,6 @@ def _score_bar(score: float, width: int = 20) -> Text:
     filled = int(round(score / 100 * width))
     empty = width - filled
 
-    # Color gradient based on score
     if score >= 80:
         bar_color = MOCHA["green"]
     elif score >= 60:
@@ -162,7 +184,7 @@ def _score_bar(score: float, width: int = 20) -> Text:
 
 
 def _confidence_badge(confidence: Confidence) -> Text:
-    """Render a confidence level as an inline badge."""
+    """Render a confidence level as an outlined badge: ``[high]``."""
     colors = {
         Confidence.HIGH: MOCHA["green"],
         Confidence.MEDIUM: MOCHA["yellow"],
@@ -171,12 +193,12 @@ def _confidence_badge(confidence: Confidence) -> Text:
     }
     color = colors.get(confidence, MOCHA["subtext1"])
     badge = Text()
-    badge.append(f" {confidence.value.upper()} ", style=f"bold {color}")
+    badge.append(f" {confidence.value} ", style=f"bold {color}")
     return badge
 
 
 def _risk_badge(risk: Risk) -> Text:
-    """Render a risk level as an inline badge."""
+    """Render a risk level as an outlined badge: ``[low risk]``."""
     colors = {
         Risk.LOW: MOCHA["green"],
         Risk.MEDIUM: MOCHA["yellow"],
@@ -184,7 +206,7 @@ def _risk_badge(risk: Risk) -> Text:
     }
     color = colors.get(risk, MOCHA["subtext1"])
     badge = Text()
-    badge.append(f" {risk.value.upper()} RISK ", style=f"bold {color}")
+    badge.append(f" {risk.value} risk ", style=f"bold {color}")
     return badge
 
 
@@ -196,30 +218,39 @@ def _category_badge(category: Category) -> Text:
     return badge
 
 
-def _commands_panel(commands: list[str]) -> Panel:
-    """Render all commands inside a single unified panel."""
+def _commands_block(commands: list[str]) -> Panel:
+    """Render all commands in a single dark code block.
+
+    Matches the screenshot: dark background, green text, no ``$`` prefix,
+    no title.  Comment lines (starting with ``#``) are rendered dimmer.
+    """
     cmd_text = Text()
     for i, cmd in enumerate(commands):
         if cmd.startswith("#"):
             cmd_text.append(cmd, style=MOCHA["overlay1"])
         else:
-            cmd_text.append("$ ", style=MOCHA["overlay2"])
-            cmd_text.append(cmd, style=MOCHA["text"])
+            cmd_text.append(cmd, style=MOCHA["green"])
         if i < len(commands) - 1:
             cmd_text.append("\n")
 
     return Panel(
         cmd_text,
-        title=f"[{MOCHA['overlay1']}]Commands[/{MOCHA['overlay1']}]",
-        title_align="left",
         box=ROUNDED,
-        border_style=MOCHA["surface2"],
+        border_style=MOCHA["surface0"],
         padding=(0, 1),
     )
 
 
+# ── Main output class ────────────────────────────────────────────────────
+
+
 class TerminalOutput:
-    """Rich terminal output formatter."""
+    """Rich terminal output formatter.
+
+    Produces output matching the Whirlpool landing-page mockup:
+    bordered panels for each section, compact score badges,
+    outlined confidence/risk pills, and unified dark command blocks.
+    """
 
     def __init__(
         self,
@@ -252,32 +283,38 @@ class TerminalOutput:
         self._path_count = 0
         self._chain_count = 0
 
+    # ── Public API ────────────────────────────────────────────────────
+
     def print_header(
         self,
         target_info: dict | None = None,
         paths: list[ExploitationPath] | None = None,
     ) -> None:
-        """Print analysis header with branded banner and target information.
+        """Print the branded banner and target information panels.
 
         Args:
             target_info: Optional dictionary with target details
             paths: Optional list of paths for the findings summary bar
         """
         self.console.print()
+
+        # ── Banner panel (mauve border, centered title) ──
         self.console.print(
-            Rule(
-                title=f"[bold {MOCHA['mauve']}]WHIRLPOOL[/bold {MOCHA['mauve']}]",
-                style=MOCHA["mauve"],
-            )
-        )
-        self.console.print(
-            Align.center(
-                Text("Privilege Escalation Reasoning Engine", style=MOCHA["overlay1"])
+            Panel(
+                Align.center(
+                    Text(
+                        "WHIRLPOOL - Privilege Escalation Analysis",
+                        style=f"bold {MOCHA['mauve']}",
+                    )
+                ),
+                box=ROUNDED,
+                border_style=MOCHA["mauve"],
+                padding=(0, 1),
             )
         )
         self.console.print()
 
-        # Target info as a clean borderless table
+        # ── Target information panel ──
         if target_info:
             info_table = Table(
                 show_header=False,
@@ -285,16 +322,16 @@ class TerminalOutput:
                 padding=(0, 2),
                 show_edge=False,
             )
-            info_table.add_column("Key", style=MOCHA["subtext0"], min_width=10)
+            info_table.add_column("Key", style=MOCHA["subtext0"], min_width=12)
             info_table.add_column("Value", style=f"bold {MOCHA['text']}")
 
             field_order = ["hostname", "os", "kernel", "user", "groups"]
             labels = {
-                "hostname": "Hostname",
-                "os": "OS",
-                "kernel": "Kernel",
-                "user": "User",
-                "groups": "Groups",
+                "hostname": "Hostname:",
+                "os": "OS:",
+                "kernel": "Kernel:",
+                "user": "User:",
+                "groups": "Groups:",
             }
             for key in field_order:
                 if key in target_info:
@@ -303,10 +340,19 @@ class TerminalOutput:
                         val = ", ".join(str(v) for v in val)
                     info_table.add_row(labels.get(key, key), str(val))
 
-            self.console.print(info_table)
+            self.console.print(
+                Panel(
+                    info_table,
+                    title=f"[{MOCHA['overlay0']}]TARGET INFORMATION[/{MOCHA['overlay0']}]",
+                    title_align="left",
+                    box=ROUNDED,
+                    border_style=MOCHA["surface1"],
+                    padding=(0, 1),
+                )
+            )
             self.console.print()
 
-        # Profile badge
+        # ── Profile + findings summary ──
         profile_text = Text()
         profile_text.append("Profile: ", style=MOCHA["subtext0"])
         profile_text.append(
@@ -314,7 +360,6 @@ class TerminalOutput:
             style=f"bold {MOCHA['lavender']}",
         )
 
-        # Findings summary bar
         if paths:
             high_conf = sum(
                 1 for p in paths if p.confidence == Confidence.HIGH
@@ -336,7 +381,7 @@ class TerminalOutput:
         paths: list[ExploitationPath],
         top_n: int = 5,
     ) -> None:
-        """Print quick wins section with high-impact cards.
+        """Print quick wins inside a bordered panel with yellow header.
 
         Args:
             paths: List of exploitation paths
@@ -350,24 +395,32 @@ class TerminalOutput:
             )
             return
 
-        self.console.print(
-            Rule(
-                title=f"[bold {MOCHA['green']}]QUICK WINS[/bold {MOCHA['green']}]",
-                style=MOCHA["green"],
-            )
-        )
-        self.console.print()
-
+        # Build all quick-win entries as a group
+        renderables: list[RenderableType] = []
         for i, path in enumerate(quick_wins, 1):
             score = self.ranker.get_score(path)
-            self._print_path_card(path, rank=i, score=score)
+            renderables.append(self._build_quick_win(path, rank=i, score=score))
 
+            # Separator between wins (not after last)
             if i < len(quick_wins):
-                self.console.print(
-                    Rule(style=MOCHA["surface1"])
+                renderables.append(
+                    Rule(style=MOCHA["surface0"])
                 )
-                self.console.print()
 
+        self.console.print(
+            Panel(
+                Group(*renderables),
+                title=(
+                    f"[bold {MOCHA['yellow']}]"
+                    "QUICK WINS - HIGHEST PROBABILITY TECHNIQUES"
+                    f"[/bold {MOCHA['yellow']}]"
+                ),
+                title_align="left",
+                box=ROUNDED,
+                border_style=MOCHA["yellow"],
+                padding=(1, 2),
+            )
+        )
         self.console.print()
 
     def print_all_paths(
@@ -390,8 +443,6 @@ class TerminalOutput:
             return
 
         self._path_count = len(paths)
-
-        # Rank paths
         ranked = self.ranker.rank(paths)
 
         if group_by_category:
@@ -400,19 +451,32 @@ class TerminalOutput:
             for category, cat_paths in grouped.items():
                 self._print_category_section(category, cat_paths, show_commands)
         else:
-            self.console.print(
-                Rule(
-                    title=f"[bold {MOCHA['blue']}]ALL PATHS ({len(ranked)})[/bold {MOCHA['blue']}]",
-                    style=MOCHA["blue"],
-                )
-            )
-            self.console.print()
-
+            renderables: list[RenderableType] = []
             for i, path in enumerate(ranked, 1):
                 score = self.ranker.get_score(path)
-                self._print_path_entry(
-                    path, rank=i, score=score, show_commands=show_commands
+                renderables.append(
+                    self._build_path_entry(
+                        path, rank=i, score=score, show_commands=show_commands
+                    )
                 )
+                if i < len(ranked):
+                    renderables.append(Rule(style=MOCHA["surface0"]))
+
+            self.console.print()
+            self.console.print(
+                Panel(
+                    Group(*renderables),
+                    title=(
+                        f"[bold {MOCHA['blue']}]"
+                        f"ALL PATHS ({len(ranked)})"
+                        f"[/bold {MOCHA['blue']}]"
+                    ),
+                    title_align="left",
+                    box=ROUNDED,
+                    border_style=MOCHA["blue"],
+                    padding=(0, 1),
+                )
+            )
 
     def print_path_detail(
         self,
@@ -443,23 +507,27 @@ class TerminalOutput:
 
         self._chain_count = len(chains)
 
+        renderables: list[RenderableType] = []
+        for i, chain in enumerate(chains, 1):
+            renderables.append(self._build_chain(chain, number=i))
+            if i < len(chains):
+                renderables.append(Rule(style=MOCHA["surface0"]))
+
         self.console.print()
         self.console.print(
-            Rule(
-                title=f"[bold {MOCHA['red']}]ATTACK CHAINS[/bold {MOCHA['red']}]",
-                style=MOCHA["red"],
+            Panel(
+                Group(*renderables),
+                title=(
+                    f"[bold {MOCHA['red']}]"
+                    "ATTACK CHAINS"
+                    f"[/bold {MOCHA['red']}]"
+                ),
+                title_align="left",
+                box=ROUNDED,
+                border_style=MOCHA["red"],
+                padding=(0, 1),
             )
         )
-        self.console.print()
-
-        for i, chain in enumerate(chains, 1):
-            self._print_chain(chain, number=i)
-
-            if i < len(chains):
-                self.console.print(
-                    Rule(style=MOCHA["surface1"])
-                )
-                self.console.print()
 
     def print_summary(
         self,
@@ -474,15 +542,6 @@ class TerminalOutput:
             return
 
         self._path_count = len(paths)
-
-        self.console.print()
-        self.console.print(
-            Rule(
-                title=f"[bold {MOCHA['lavender']}]ANALYSIS SUMMARY[/bold {MOCHA['lavender']}]",
-                style=MOCHA["lavender"],
-            )
-        )
-        self.console.print()
 
         # Count breakdowns
         by_category: dict[Category, int] = {}
@@ -499,7 +558,6 @@ class TerminalOutput:
             scores.append(self.ranker.get_score(path))
 
         # Three-column layout
-        # Left: Confidence breakdown
         conf_table = Table(
             title=f"[bold {MOCHA['sapphire']}]By Confidence[/bold {MOCHA['sapphire']}]",
             box=ROUNDED,
@@ -526,7 +584,6 @@ class TerminalOutput:
                     f"[bold {color}]{count}[/bold {color}]",
                 )
 
-        # Center: Risk breakdown
         risk_table = Table(
             title=f"[bold {MOCHA['sapphire']}]By Risk[/bold {MOCHA['sapphire']}]",
             box=ROUNDED,
@@ -552,7 +609,6 @@ class TerminalOutput:
                     f"[bold {color}]{count}[/bold {color}]",
                 )
 
-        # Right: Category breakdown (top categories)
         cat_table = Table(
             title=f"[bold {MOCHA['sapphire']}]By Category[/bold {MOCHA['sapphire']}]",
             box=ROUNDED,
@@ -568,19 +624,20 @@ class TerminalOutput:
         for cat, count in sorted_cats[:8]:
             cat_table.add_row(cat.value.upper().replace("_", " "), str(count))
 
-        self.console.print(
+        summary_parts: list[RenderableType] = []
+        summary_parts.append(
             Columns(
                 [conf_table, risk_table, cat_table],
                 padding=(0, 2),
                 expand=True,
             )
         )
-        self.console.print()
+        summary_parts.append(Text(""))
 
         # Score distribution histogram
         if scores:
-            self._print_score_distribution(scores)
-            self.console.print()
+            summary_parts.append(self._build_score_distribution(scores))
+            summary_parts.append(Text(""))
 
         # Top recommendation callout
         ranked = self.ranker.rank(paths)
@@ -591,15 +648,14 @@ class TerminalOutput:
             rec_text.append("Top Recommendation: ", style=f"bold {MOCHA['green']}")
             rec_text.append(top.technique_name, style=f"bold {MOCHA['text']}")
             rec_text.append("  ")
-            rec_text.append_text(_score_bar(top_score, width=15))
+            rec_text.append_text(_score_badge(top_score))
             rec_text.append("\n")
             rec_text.append(top.description, style=MOCHA["subtext0"])
             if top.commands:
                 rec_text.append("\n")
-                rec_text.append("$ ", style=MOCHA["overlay2"])
-                rec_text.append(top.commands[0], style=MOCHA["text"])
+                rec_text.append(top.commands[0], style=MOCHA["green"])
 
-            self.console.print(
+            summary_parts.append(
                 Panel(
                     rec_text,
                     border_style=MOCHA["green"],
@@ -607,6 +663,22 @@ class TerminalOutput:
                     padding=(0, 1),
                 )
             )
+
+        self.console.print()
+        self.console.print(
+            Panel(
+                Group(*summary_parts),
+                title=(
+                    f"[bold {MOCHA['lavender']}]"
+                    "ANALYSIS SUMMARY"
+                    f"[/bold {MOCHA['lavender']}]"
+                ),
+                title_align="left",
+                box=ROUNDED,
+                border_style=MOCHA["lavender"],
+                padding=(0, 1),
+            )
+        )
 
         # Footer
         self.console.print()
@@ -623,28 +695,25 @@ class TerminalOutput:
 
     # ── Internal rendering methods ──────────────────────────────────────
 
-    def _print_path_card(
+    def _build_quick_win(
         self,
         path: ExploitationPath,
         rank: int = 0,
         score: float = 0,
-    ) -> None:
-        """Print a path as a rich card (used for quick wins and detail views)."""
-        # Title line: rank + name + score bar
+    ) -> Group:
+        """Build a quick-win entry as a Rich Group (for embedding in panel)."""
+        # Title line: [1]  [95]  Sudo systemctl  [high]  [low risk]
         title_line = Text()
         if rank:
-            title_line.append(f"[{rank}] ", style=f"bold {MOCHA['overlay2']}")
-        title_line.append(path.technique_name, style=f"bold {MOCHA['text']}")
+            title_line.append(f"[{rank}]", style=f"bold {MOCHA['text']}")
+            title_line.append("  ")
+        title_line.append_text(_score_badge(score))
         title_line.append("  ")
-        title_line.append_text(_score_bar(score))
-
-        # Badges row
-        badges = Text()
-        badges.append_text(_confidence_badge(path.confidence))
-        badges.append("  ")
-        badges.append_text(_risk_badge(path.risk))
-        badges.append("  ")
-        badges.append_text(_category_badge(path.category))
+        title_line.append(path.technique_name, style=f"bold {MOCHA['text']}")
+        title_line.append("   ")
+        title_line.append_text(_confidence_badge(path.confidence))
+        title_line.append("  ")
+        title_line.append_text(_risk_badge(path.risk))
 
         # Description
         desc = Text(path.description, style=MOCHA["subtext0"])
@@ -654,7 +723,50 @@ class TerminalOutput:
         finding.append("Finding: ", style=MOCHA["overlay1"])
         finding.append(path.finding, style=MOCHA["sapphire"])
 
-        # Build card content
+        parts: list = [Text(""), title_line, Text(""), desc, finding]
+
+        # Notes (highlighted)
+        if path.notes:
+            note = Text()
+            note.append("Note: ", style=f"bold {MOCHA['peach']}")
+            note.append(path.notes, style=MOCHA["peach"])
+            parts.append(note)
+
+        # Commands
+        if path.commands:
+            parts.append(Text(""))
+            parts.append(_commands_block(path.commands))
+
+        parts.append(Text(""))
+        return Group(*parts)
+
+    def _print_path_card(
+        self,
+        path: ExploitationPath,
+        rank: int = 0,
+        score: float = 0,
+    ) -> None:
+        """Print a path as a rich card (used for detail views)."""
+        title_line = Text()
+        if rank:
+            title_line.append(f"[{rank}] ", style=f"bold {MOCHA['overlay2']}")
+        title_line.append(path.technique_name, style=f"bold {MOCHA['text']}")
+        title_line.append("  ")
+        title_line.append_text(_score_badge(score))
+
+        badges = Text()
+        badges.append_text(_confidence_badge(path.confidence))
+        badges.append("  ")
+        badges.append_text(_risk_badge(path.risk))
+        badges.append("  ")
+        badges.append_text(_category_badge(path.category))
+
+        desc = Text(path.description, style=MOCHA["subtext0"])
+
+        finding = Text()
+        finding.append("Finding: ", style=MOCHA["overlay1"])
+        finding.append(path.finding, style=MOCHA["sapphire"])
+
         card_content = Text()
         card_content.append_text(title_line)
         card_content.append("\n")
@@ -664,7 +776,6 @@ class TerminalOutput:
         card_content.append("\n")
         card_content.append_text(finding)
 
-        # Notes (highlighted)
         if path.notes:
             card_content.append("\n")
             card_content.append("Note: ", style=f"bold {MOCHA['peach']}")
@@ -679,11 +790,9 @@ class TerminalOutput:
             )
         )
 
-        # Commands in unified block
         if path.commands:
-            self.console.print(_commands_panel(path.commands))
+            self.console.print(_commands_block(path.commands))
 
-        # Prerequisites
         if path.prerequisites:
             prereq_text = Text()
             prereq_text.append("Prerequisites: ", style=f"bold {MOCHA['yellow']}")
@@ -692,14 +801,74 @@ class TerminalOutput:
             )
             self.console.print(prereq_text)
 
-        # References
         if path.references:
             for ref in path.references:
                 self.console.print(
-                    Text(f"  {ref}", style=f"{MOCHA['overlay1']} underline")
+                    Text(f"  {ref}", style=f"dim {MOCHA['overlay1']}")
                 )
 
         self.console.print()
+
+    def _build_path_entry(
+        self,
+        path: ExploitationPath,
+        rank: int = 0,
+        score: float = 0,
+        show_commands: bool = True,
+    ) -> Group:
+        """Build a compact path entry as a Rich Group (for embedding in panels)."""
+        parts: list[RenderableType] = []
+
+        # Title: [rank]  [score]  Name  [conf]  [risk]
+        title = Text()
+        if rank:
+            title.append(f"[{rank}]", style=f"bold {MOCHA['overlay2']}")
+            title.append("  ")
+        title.append_text(_score_badge(score))
+        title.append("  ")
+        title.append(path.technique_name, style=f"bold {MOCHA['text']}")
+        title.append("   ")
+        title.append_text(_confidence_badge(path.confidence))
+        title.append(" ")
+        title.append_text(_risk_badge(path.risk))
+        parts.append(title)
+
+        # Description
+        parts.append(Text(f"  {path.description}", style=MOCHA["subtext0"]))
+
+        # Finding
+        finding = Text()
+        finding.append("  Finding: ", style=MOCHA["overlay1"])
+        finding.append(path.finding, style=MOCHA["sapphire"])
+        parts.append(finding)
+
+        # Commands in one block
+        if show_commands and path.commands:
+            parts.append(Padding(_commands_block(path.commands), (0, 0, 0, 2)))
+
+        # Prerequisites inline
+        if path.prerequisites:
+            prereq = Text()
+            prereq.append("  Prerequisites: ", style=MOCHA["yellow"])
+            prereq.append(", ".join(path.prerequisites), style=MOCHA["subtext0"])
+            parts.append(prereq)
+
+        # References
+        if path.references:
+            for ref in path.references:
+                parts.append(
+                    Text(f"    {ref}", style=f"dim {MOCHA['overlay1']}")
+                )
+
+        # Notes
+        if path.notes:
+            note = Text()
+            note.append("  Note: ", style=f"bold {MOCHA['peach']}")
+            note.append(path.notes, style=MOCHA["peach"])
+            parts.append(note)
+
+        parts.append(Text(""))
+        return Group(*parts)
 
     def _print_path_entry(
         self,
@@ -709,59 +878,9 @@ class TerminalOutput:
         show_commands: bool = True,
     ) -> None:
         """Print a compact path entry (used in category listings)."""
-        # Title: [rank] Name  ████░░ score  CONF  RISK
-        title = Text()
-        if rank:
-            title.append(f"[{rank}] ", style=f"bold {MOCHA['overlay2']}")
-        title.append(path.technique_name, style=f"bold {MOCHA['text']}")
-        title.append("  ")
-        title.append_text(_score_bar(score, width=15))
-        title.append("  ")
-        title.append_text(_confidence_badge(path.confidence))
-        title.append(" ")
-        title.append_text(_risk_badge(path.risk))
-
-        self.console.print(title)
-
-        # Description
         self.console.print(
-            Text(f"  {path.description}", style=MOCHA["subtext0"])
+            self._build_path_entry(path, rank, score, show_commands)
         )
-
-        # Finding
-        finding = Text()
-        finding.append("  Finding: ", style=MOCHA["overlay1"])
-        finding.append(path.finding, style=MOCHA["sapphire"])
-        self.console.print(finding)
-
-        # Commands in one panel
-        if show_commands and path.commands:
-            self.console.print(
-                Padding(_commands_panel(path.commands), (0, 0, 0, 2))
-            )
-
-        # Prerequisites inline
-        if path.prerequisites:
-            prereq = Text()
-            prereq.append("  Prerequisites: ", style=MOCHA["yellow"])
-            prereq.append(", ".join(path.prerequisites), style=MOCHA["subtext0"])
-            self.console.print(prereq)
-
-        # References
-        if path.references:
-            for ref in path.references:
-                self.console.print(
-                    Text(f"    {ref}", style=f"{MOCHA['overlay1']} underline")
-                )
-
-        # Notes
-        if path.notes:
-            note = Text()
-            note.append("  Note: ", style=f"bold {MOCHA['peach']}")
-            note.append(path.notes, style=MOCHA["peach"])
-            self.console.print(note)
-
-        self.console.print()
 
     def _print_category_section(
         self,
@@ -769,25 +888,36 @@ class TerminalOutput:
         paths: list[ExploitationPath],
         show_commands: bool,
     ) -> None:
-        """Print a category section with count badge."""
-        icon = CATEGORY_ICONS.get(category, "--")
+        """Print a category section wrapped in a bordered panel."""
         color = CATEGORY_COLORS.get(category, MOCHA["subtext1"])
         cat_name = category.value.upper().replace("_", " ")
-        title = f"[bold {color}]{icon} {cat_name} ({len(paths)})[/bold {color}]"
+        title = f"[bold {color}]{cat_name} ({len(paths)})[/bold {color}]"
 
-        self.console.print()
-        self.console.print(Rule(title=title, style=color))
-        self.console.print()
-
+        renderables: list[RenderableType] = []
         for i, path in enumerate(paths, 1):
             score = self.ranker.get_score(path)
-            self._print_path_entry(
-                path, rank=i, score=score, show_commands=show_commands
+            renderables.append(
+                self._build_path_entry(
+                    path, rank=i, score=score, show_commands=show_commands
+                )
             )
+            if i < len(paths):
+                renderables.append(Rule(style=MOCHA["surface0"]))
 
-    def _print_chain(self, chain, number: int = 0) -> None:
-        """Print a single attack chain as a tree."""
-        # Root label with badges
+        self.console.print()
+        self.console.print(
+            Panel(
+                Group(*renderables),
+                title=title,
+                title_align="left",
+                box=ROUNDED,
+                border_style=color,
+                padding=(0, 1),
+            )
+        )
+
+    def _build_chain(self, chain, number: int = 0) -> Group:
+        """Build a single attack chain as a Rich Group (for embedding in panels)."""
         root_label = Text()
         if number:
             root_label.append(f"[{number}] ", style=f"bold {MOCHA['overlay2']}")
@@ -799,10 +929,8 @@ class TerminalOutput:
 
         tree = Tree(root_label)
 
-        # Description branch
         tree.add(Text(chain.description, style=MOCHA["subtext0"]))
 
-        # Prerequisites at chain level
         if chain.prerequisites:
             prereq_branch = tree.add(
                 Text("Prerequisites", style=f"bold {MOCHA['yellow']}")
@@ -810,7 +938,6 @@ class TerminalOutput:
             for prereq in chain.prerequisites:
                 prereq_branch.add(Text(prereq, style=MOCHA["subtext0"]))
 
-        # Steps as branches
         for step in chain.steps:
             step_label = Text()
             step_label.append(f"Step {step.order}: ", style=f"bold {MOCHA['sapphire']}")
@@ -818,7 +945,6 @@ class TerminalOutput:
 
             step_branch = tree.add(step_label)
 
-            # Commands under each step
             if step.commands:
                 for cmd in step.commands:
                     if cmd.startswith("#"):
@@ -826,35 +952,28 @@ class TerminalOutput:
                     elif cmd == "":
                         continue
                     else:
-                        cmd_text = Text()
-                        cmd_text.append("$ ", style=MOCHA["overlay2"])
-                        cmd_text.append(cmd, style=MOCHA["text"])
-                        step_branch.add(cmd_text)
+                        step_branch.add(Text(cmd, style=MOCHA["green"]))
 
-            # Step output
             if step.output:
                 out_text = Text()
                 out_text.append("-> ", style=MOCHA["green"])
                 out_text.append(step.output, style=MOCHA["green"])
                 step_branch.add(out_text)
 
-        # Notes
         if chain.notes:
             note = Text()
             note.append("Note: ", style=f"bold {MOCHA['peach']}")
             note.append(chain.notes, style=MOCHA["peach"])
             tree.add(note)
 
-        # References
         if chain.references:
             for ref in chain.references:
-                tree.add(Text(ref, style=f"{MOCHA['overlay1']} underline"))
+                tree.add(Text(ref, style=f"dim {MOCHA['overlay1']}"))
 
-        self.console.print(tree)
-        self.console.print()
+        return Group(tree, Text(""))
 
-    def _print_score_distribution(self, scores: list[float]) -> None:
-        """Print a text histogram of score distribution."""
+    def _build_score_distribution(self, scores: list[float]) -> Text:
+        """Build a text histogram of score distribution."""
         buckets = {"90-100": 0, "70-89": 0, "50-69": 0, "30-49": 0, "0-29": 0}
         bucket_colors = {
             "90-100": MOCHA["green"],
@@ -892,7 +1011,7 @@ class TerminalOutput:
             dist_text.append("\u2588" * bar_len, style=color)
             dist_text.append(f" {count}\n", style=f"bold {color}")
 
-        self.console.print(dist_text)
+        return dist_text
 
     def _print_score_breakdown(self, breakdown: dict) -> None:
         """Print detailed score breakdown."""

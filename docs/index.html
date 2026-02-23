@@ -1064,7 +1064,7 @@
       <div class="feature-card">
         <span class="feature-icon" aria-hidden="true">&#128218;</span>
         <h3>Offline Knowledge</h3>
-        <p>246 GTFOBins, 39 LOLBAS, 18 kernel exploits, 9 potato attacks. Everything runs locally -- no API calls, no internet required.</p>
+        <p>329 GTFOBins, 86 LOLBAS, 42 kernel exploits, 9 potato attacks. Everything runs locally -- no API calls, no internet required.</p>
       </div>
 
       <div class="feature-card">
@@ -1197,7 +1197,7 @@
               <h3>Analyzer</h3>
             </div>
             <p>
-              Match parsed findings against <code>gtfobins.json</code>, <code>kernel_exploits.json</code>, <code>potato_matrix.json</code>, and <code>lolbas.json</code>. Generate ExploitationPath objects with exact commands.
+              Match parsed findings against <code>gtfobins.json</code>, <code>kernel_exploits.json</code>, <code>potato_matrix.json</code>, and <code>lolbas.json</code>. Analyze credentials, network services, writable files, groups, tokens, DLL hijacking, UAC, and AD/Kerberos.
             </p>
           </div>
 
@@ -1247,21 +1247,21 @@
 
     <div class="kb-grid">
       <div class="kb-card">
-        <div class="kb-number">246</div>
+        <div class="kb-number">329</div>
         <div class="kb-label">GTFOBins</div>
-        <div class="kb-desc">Unix binaries with SUID, sudo, and capabilities exploitation techniques</div>
+        <div class="kb-desc">Unix binaries with SUID, sudo, capabilities, file_read, file_write, and shell techniques</div>
       </div>
 
       <div class="kb-card">
-        <div class="kb-number">39</div>
+        <div class="kb-number">86</div>
         <div class="kb-label">LOLBAS</div>
         <div class="kb-desc">Windows living-off-the-land binaries and scripts</div>
       </div>
 
       <div class="kb-card">
-        <div class="kb-number">18</div>
+        <div class="kb-number">42</div>
         <div class="kb-label">Kernel Exploits</div>
-        <div class="kb-desc">Linux + Windows CVEs with affected version ranges and commands</div>
+        <div class="kb-desc">23 Linux + 19 Windows CVEs with affected version ranges and commands</div>
       </div>
 
       <div class="kb-card">
@@ -1376,6 +1376,12 @@
           </div>
           <div class="start-line" style="margin-bottom:0;">
             <span class="prompt">$</span> <span class="cmd">whirlpool</span> <span class="arg">enum.txt</span> <span class="flag">-f</span> <span class="arg">markdown</span> <span class="flag">-o</span> <span class="arg">report.md</span>
+          </div>
+          <div class="start-line" style="margin-bottom:0;">
+            <span class="prompt">$</span> <span class="cmd">whirlpool</span> <span class="arg">enum.txt</span> <span class="flag">--lhost</span> <span class="arg">10.10.14.1</span> <span class="flag">--lport</span> <span class="arg">4444</span>
+          </div>
+          <div class="start-line" style="margin-bottom:0;">
+            <span class="prompt">$</span> <span class="cmd">cat</span> <span class="arg">linpeas.txt</span> | <span class="cmd">whirlpool</span> <span class="comment">&nbsp;&nbsp;# pipe input</span>
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -198,6 +199,9 @@ def parse_categories(categories_str: str) -> list[Category]:
 def _substitute_placeholders(paths: list, lhost: str | None, lport: int | None) -> None:
     """Substitute attacker IP/port placeholders in all path commands in-place.
 
+    Uses word-boundary regex to avoid corrupting patterns like ``LHOST=ATTACKER_IP``
+    (which would otherwise become ``10.10.14.1=10.10.14.1``).
+
     Args:
         paths: List of ExploitationPath objects
         lhost: Attacker IP address (replaces ATTACKER_IP and LHOST)
@@ -208,12 +212,12 @@ def _substitute_placeholders(paths: list, lhost: str | None, lport: int | None) 
     for path in paths:
         new_commands = []
         for cmd in path.commands:
-            if lhost:
-                cmd = cmd.replace('ATTACKER_IP', lhost)
-                cmd = cmd.replace('LHOST', lhost)
+            if lhost is not None:
+                cmd = re.sub(r'\bATTACKER_IP\b', lhost, cmd)
+                cmd = re.sub(r'\bLHOST\b', lhost, cmd)
             if lport_str is not None:
-                cmd = cmd.replace('LPORT', lport_str)
-                cmd = cmd.replace('ATTACKER_PORT', lport_str)
+                cmd = re.sub(r'\bLPORT\b', lport_str, cmd)
+                cmd = re.sub(r'\bATTACKER_PORT\b', lport_str, cmd)
             new_commands.append(cmd)
         path.commands = new_commands
 
@@ -232,12 +236,12 @@ def _substitute_chain_placeholders(chains: list, lhost: str | None, lport: int |
         for step in chain.steps:
             new_commands = []
             for cmd in step.commands:
-                if lhost:
-                    cmd = cmd.replace('ATTACKER_IP', lhost)
-                    cmd = cmd.replace('LHOST', lhost)
+                if lhost is not None:
+                    cmd = re.sub(r'\bATTACKER_IP\b', lhost, cmd)
+                    cmd = re.sub(r'\bLHOST\b', lhost, cmd)
                 if lport_str is not None:
-                    cmd = cmd.replace('LPORT', lport_str)
-                    cmd = cmd.replace('ATTACKER_PORT', lport_str)
+                    cmd = re.sub(r'\bLPORT\b', lport_str, cmd)
+                    cmd = re.sub(r'\bATTACKER_PORT\b', lport_str, cmd)
                 new_commands.append(cmd)
             step.commands = new_commands
 
@@ -253,11 +257,11 @@ def _diff_paths(paths1: list, paths2: list) -> tuple[list, list]:
         Tuple of (new_paths, removed_paths) where new_paths are in paths2
         but not paths1, and removed_paths are in paths1 but not paths2.
     """
-    names1 = {p.technique_name for p in paths1}
-    names2 = {p.technique_name for p in paths2}
+    keys1 = {(p.technique_name, p.finding) for p in paths1}
+    keys2 = {(p.technique_name, p.finding) for p in paths2}
 
-    new_paths = [p for p in paths2 if p.technique_name not in names1]
-    removed_paths = [p for p in paths1 if p.technique_name not in names2]
+    new_paths = [p for p in paths2 if (p.technique_name, p.finding) not in keys1]
+    removed_paths = [p for p in paths1 if (p.technique_name, p.finding) not in keys2]
 
     return new_paths, removed_paths
 
@@ -519,7 +523,7 @@ Examples:
         # Substitute --lhost / --lport placeholders
         lhost = parsed_args.lhost
         lport = parsed_args.lport
-        if lhost or lport is not None:
+        if lhost is not None or lport is not None:
             _substitute_placeholders(paths, lhost, lport)
             _substitute_chain_placeholders(chains, lhost, lport)
             if diff_new:
