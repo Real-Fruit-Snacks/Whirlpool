@@ -15,40 +15,43 @@ Whirlpool is a CLI privilege escalation reasoning engine that parses enumeration
 <br>
 
 ```
-──────────────────────────────── WHIRLPOOL ─────────────────────────────────
-                    Privilege Escalation Reasoning Engine
+╭──────────────────────────────────────────────────────────────╮
+│         WHIRLPOOL - Privilege Escalation Analysis             │
+╰──────────────────────────────────────────────────────────────╯
 
-  Hostname    jarvis
-  Kernel      4.9.0
-  User        www-data
+╭─ TARGET INFORMATION ─────────────────────────────────────────╮
+│  Hostname:    jarvis                                         │
+│  Kernel:      4.9.0                                          │
+│  User:        www-data                                       │
+╰──────────────────────────────────────────────────────────────╯
 
 Profile:  DEFAULT   12 paths found | 6 high confidence | 9 low risk
 
-────────────────────────────────── QUICK WINS ──────────────────────────────
-
-╭──────────────────────────────────────────────────────────────────────────╮
-│ [1] Sudo systemctl  ████████████████████ 95                              │
-│  HIGH    LOW RISK    SUDO                                                │
-│ User can run systemctl as root with NOPASSWD                             │
-│ Finding: (ALL : ALL) NOPASSWD: /bin/systemctl                            │
-│ Note: NOPASSWD                                                           │
-╰──────────────────────────────────────────────────────────────────────────╯
-╭─ Commands ───────────────────────────────────────────────────────────────╮
-│ $ sudo systemctl                                                         │
-│ $ !sh                                                                    │
-╰──────────────────────────────────────────────────────────────────────────╯
-
-────────────────────────────────────────────────────────────────────────────
-
-╭──────────────────────────────────────────────────────────────────────────╮
-│ [2] SUID pkexec  ████████████████░░░░ 82                                 │
-│  HIGH    LOW RISK    SUID                                                │
-│ Exploit SUID bit on pkexec (CVE-2021-4034)                               │
-│ Finding: /usr/bin/pkexec                                                 │
-╰──────────────────────────────────────────────────────────────────────────╯
-╭─ Commands ───────────────────────────────────────────────────────────────╮
-│ $ /usr/bin/pkexec /bin/sh                                                │
-╰──────────────────────────────────────────────────────────────────────────╯
+╭─ QUICK WINS - HIGHEST PROBABILITY TECHNIQUES ───────────────╮
+│                                                              │
+│  [1]  95  Sudo systemctl    high   low risk                  │
+│                                                              │
+│  User can run systemctl as root with NOPASSWD                │
+│  Finding: (ALL : ALL) NOPASSWD: /bin/systemctl               │
+│  Note: NOPASSWD                                              │
+│                                                              │
+│  ╭──────────────────────────────────────────────────────╮    │
+│  │ sudo systemctl                                       │    │
+│  │ !sh                                                  │    │
+│  ╰──────────────────────────────────────────────────────╯    │
+│                                                              │
+│  ────────────────────────────────────────────────────────    │
+│                                                              │
+│  [2]  82  SUID pkexec    high   low risk                     │
+│                                                              │
+│  Exploit SUID bit on pkexec (CVE-2021-4034)                  │
+│  Finding: /usr/bin/pkexec                                    │
+│                                                              │
+│  ╭──────────────────────────────────────────────────────╮    │
+│  │ /usr/bin/pkexec /bin/sh                              │    │
+│  ╰──────────────────────────────────────────────────────╯    │
+│                                                              │
+╰──────────────────────────────────────────────────────────────╯
 ```
 
 </div>
@@ -76,7 +79,7 @@ Profile:  DEFAULT   12 paths found | 6 high confidence | 9 low risk
 <td width="50%">
 
 ### Auto-Detection
-Feed Whirlpool any enumeration file and it figures out the format. Handles LinPEAS `.exe` output (Unicode box headers), `.bat` output (`_-_-_-_->` markers), `.exe` beta format (`[+]` sections), and manual command output — all automatically.
+Feed Whirlpool any enumeration file and it figures out the format. Handles LinPEAS `.sh` output (Unicode box headers), WinPEAS `.exe` output, `.bat` output (`_-_-_-_->` markers), `.exe` beta format (`[+]` sections), and manual command output — all automatically.
 
 </td>
 <td width="50%">
