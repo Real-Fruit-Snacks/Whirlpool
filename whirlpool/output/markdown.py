@@ -21,11 +21,16 @@ def _escape_md(text: str) -> str:
     return _MD_SPECIAL.sub(r'\\\1', text)
 
 
+def _safe_code_block(text: str) -> str:
+    """Escape triple backticks inside text placed in fenced code blocks."""
+    return text.replace('```', '` ` `')
+
+
 class MarkdownOutput:
     """Markdown output formatter."""
 
-    def __init__(self):
-        self.ranker = Ranker()
+    def __init__(self, ranker: Ranker | None = None):
+        self.ranker = ranker or Ranker()
 
     def generate(
         self,
@@ -203,7 +208,7 @@ class MarkdownOutput:
                 "",
                 "**Finding:**",
                 "```",
-                f"{path.finding}",
+                f"{_safe_code_block(path.finding)}",
                 "```",
                 "",
             ])
@@ -212,7 +217,7 @@ class MarkdownOutput:
                 lines.append("**Exploitation:**")
                 lines.append("```bash")
                 for cmd in path.commands:
-                    lines.append(cmd)
+                    lines.append(_safe_code_block(cmd))
                 lines.append("```")
                 lines.append("")
 
@@ -253,7 +258,7 @@ class MarkdownOutput:
                 if step.commands:
                     lines.append("```bash")
                     for cmd in step.commands:
-                        lines.append(cmd)
+                        lines.append(_safe_code_block(cmd))
                     lines.append("```")
                     lines.append("")
 
@@ -296,7 +301,7 @@ class MarkdownOutput:
                     "",
                     "**Finding:**",
                     "```",
-                    f"{path.finding}",
+                    f"{_safe_code_block(path.finding)}",
                     "```",
                     "",
                 ])
@@ -311,7 +316,7 @@ class MarkdownOutput:
                     lines.append("**Commands:**")
                     lines.append("```bash")
                     for cmd in path.commands:
-                        lines.append(cmd)
+                        lines.append(_safe_code_block(cmd))
                     lines.append("```")
                     lines.append("")
 

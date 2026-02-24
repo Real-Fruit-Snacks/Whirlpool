@@ -8,12 +8,28 @@ from __future__ import annotations
 import json
 import logging
 import re
+import shlex
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 logger = logging.getLogger(__name__)
+
+# Safe character set for file paths interpolated into shell commands
+_SAFE_PATH_RE = re.compile(r'^[/a-zA-Z0-9._-]+$')
+
+
+def _safe_path(path: str) -> str:
+    """Sanitize a file path for safe inclusion in shell commands.
+
+    Returns the path unchanged if it contains only safe characters,
+    otherwise returns a shlex-quoted version.
+    """
+    if _SAFE_PATH_RE.match(path):
+        return path
+    return shlex.quote(path)
+
 
 if TYPE_CHECKING:
     from whirlpool.parser.linpeas import LinPEASResults
@@ -83,19 +99,6 @@ class ExploitationPath:
     simplicity_score: int = 50
     stealth_score: int = 50
 
-    # Base score using default weights (use Ranker.get_score for profile-aware scoring)
-    @property
-    def _base_score(self) -> float:
-        """Calculate weighted base score with default weights.
-
-        Note: Use Ranker.get_score() for profile-aware scoring.
-        """
-        return (
-            self.reliability_score * 0.40 +
-            self.safety_score * 0.30 +
-            self.simplicity_score * 0.20 +
-            self.stealth_score * 0.10
-        )
 
 
 class Analyzer:
@@ -266,7 +269,7 @@ class Analyzer:
                     # Substitute actual path
                     actual_commands = []
                     for cmd in commands:
-                        actual_cmd = cmd.replace(f"./{binary_name}", suid.path)
+                        actual_cmd = cmd.replace(f"./{binary_name}", _safe_path(suid.path))
                         actual_commands.append(actual_cmd)
 
                     path = ExploitationPath(
@@ -339,12 +342,12 @@ class Analyzer:
                     if "capabilities" in gtfo:
                         cap_info = gtfo["capabilities"]
                         for cmd in cap_info.get("commands", []):
-                            actual_cmd = cmd.replace(f"./{binary_name}", cap_entry.path)
+                            actual_cmd = cmd.replace(f"./{binary_name}", _safe_path(cap_entry.path))
                             commands.append(actual_cmd)
                     elif "suid" in gtfo:
                         # Some SUID techniques work with capabilities too
                         for cmd in gtfo["suid"].get("commands", []):
-                            actual_cmd = cmd.replace(f"./{binary_name}", cap_entry.path)
+                            actual_cmd = cmd.replace(f"./{binary_name}", _safe_path(cap_entry.path))
                             commands.append(actual_cmd)
 
                 if not commands:
@@ -525,7 +528,7 @@ class Analyzer:
                             commands = []
                             for cmd in sudo_info.get("commands", []):
                                 # Replace generic sudo with actual command
-                                actual_cmd = cmd.replace(f"sudo {binary_name}", f"sudo {binary_path}")
+                                actual_cmd = cmd.replace(f"sudo {binary_name}", f"sudo {_safe_path(binary_path)}")
                                 commands.append(actual_cmd)
 
                             path = ExploitationPath(
@@ -1643,7 +1646,7 @@ class Analyzer:
                     suid_info = gtfo["suid"]
                     commands = []
                     for cmd in suid_info.get("commands", []):
-                        actual_cmd = cmd.replace(f"./{binary_name}", sgid.path)
+                        actual_cmd = cmd.replace(f"./{binary_name}", _safe_path(sgid.path))
                         commands.append(actual_cmd)
 
                     path = ExploitationPath(
@@ -2067,6 +2070,8 @@ class Analyzer:
             },
         }
 
+        uac_confidence = Confidence.HIGH if is_admin else Confidence.MEDIUM
+
         for technique_name, uac_info in uac_techniques.items():
             path = ExploitationPath(
                 category=Category.UAC,
@@ -2075,7 +2080,7 @@ class Analyzer:
                 finding=f"Integrity: {integrity_level or 'Medium (assumed)'}, Admin group: {is_admin}",
                 commands=list(uac_info["commands"]),
                 prerequisites=["Medium integrity level", "User in Administrators group"],
-                confidence=Confidence.HIGH,
+                confidence=uac_confidence,
                 risk=Risk.LOW,
                 references=["https://github.com/hfiref0x/UACME"],
                 reliability_score=85,
@@ -2208,6 +2213,9 @@ class Analyzer:
                     parts.append(int(numeric_part))
             if not parts:
                 raise ValueError(f"No numeric parts in version: {v}")
+            # Pad to minimum 3 parts so (5, 10) becomes (5, 10, 0)
+            while len(parts) < 3:
+                parts.append(0)
             return tuple(parts[:4])  # Limit to 4 parts
 
         try:

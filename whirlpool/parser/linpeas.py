@@ -62,6 +62,13 @@ _SERVICE_PATTERN = re.compile(
     r'(\S+)?'
 )
 
+# Frequently used inline patterns promoted to module-level compiled constants
+_CAP_WORD_PATTERN = re.compile(r'cap_\w+')
+_UID_PATTERN = re.compile(r'uid=(\d+)\(([^)]+)\)')
+_GID_PATTERN = re.compile(r'gid=(\d+)')
+_GROUPS_PATTERN = re.compile(r'groups=([^\n]+)')
+_LINUX_VERSION_PATTERN = re.compile(r'Linux version\s+(\S+)')
+
 # Words that appear in parentheses but aren't sudo runas specs
 _NOISE_RUNAS = frozenset({
     'self', 'proxy', 'username', 'password', 'output', 'limit',
@@ -256,8 +263,15 @@ class LinPEASParser:
 
         Returns:
             LinPEASResults containing all extracted data
+
+        Raises:
+            ValueError: If file exceeds 100MB size limit
         """
         path = Path(path)
+        max_size = 100 * 1024 * 1024  # 100 MB
+        file_size = path.stat().st_size
+        if file_size > max_size:
+            raise ValueError(f"File exceeds {max_size // (1024 * 1024)}MB limit ({file_size // (1024 * 1024)}MB)")
         # Try different encodings
         for encoding in ['utf-8', 'latin-1', 'cp1252']:
             try:
@@ -331,16 +345,16 @@ class LinPEASParser:
         all_text = '\n'.join(lines)
 
         # Extract uid/gid/groups from anywhere in output
-        uid_match = re.search(r'uid=(\d+)\(([^)]+)\)', all_text)
+        uid_match = _UID_PATTERN.search(all_text)
         if uid_match:
             self.results.current_uid = int(uid_match.group(1))
             self.results.current_user = uid_match.group(2)
 
-        gid_match = re.search(r'gid=(\d+)', all_text)
+        gid_match = _GID_PATTERN.search(all_text)
         if gid_match:
             self.results.current_gid = int(gid_match.group(1))
 
-        groups_match = re.search(r'groups=([^\n]+)', all_text)
+        groups_match = _GROUPS_PATTERN.search(all_text)
         if groups_match:
             groups_str = groups_match.group(1)
             for g in groups_str.split(','):
@@ -349,7 +363,7 @@ class LinPEASParser:
                     self.results.current_groups.append(match.group(1))
 
         # Extract kernel version
-        version_match = re.search(r'Linux version\s+(\S+)', all_text)
+        version_match = _LINUX_VERSION_PATTERN.search(all_text)
         if version_match:
             self.results.kernel_release = version_match.group(1)
             ver_match = re.search(r'(\d+\.\d+\.\d+)', version_match.group(1))
@@ -357,26 +371,31 @@ class LinPEASParser:
                 self.results.kernel_version = ver_match.group(1)
 
         # Extract SUID binaries from ls -la format
+        seen_suid_paths: set[str] = {s.path for s in self.results.suid_binaries}
+        seen_cap_paths: set[str] = {c.path for c in self.results.capabilities}
         for match in _LS_SUID_PATTERN.finditer(all_text):
             perms, _, owner, group, size, date, path = match.groups()
             if 's' in perms.lower():
+                stripped_path = path.strip()
                 entry = SUIDEntry(
-                    path=path.strip(),
+                    path=stripped_path,
                     owner=owner,
                     group=group,
                     permissions=perms,
                     size=size,
                     date=date.strip()
                 )
-                # Avoid duplicates
-                if not any(s.path == entry.path for s in self.results.suid_binaries):
+                # Avoid duplicates using set lookup
+                if stripped_path not in seen_suid_paths:
+                    seen_suid_paths.add(stripped_path)
                     self.results.suid_binaries.append(entry)
 
         # Extract capabilities
         for match in _CAP_PATTERN.finditer(all_text):
             path, cap_str = match.groups()
-            caps = re.findall(r'cap_\w+', cap_str.lower())
-            if caps and not any(c.path == path for c in self.results.capabilities):
+            caps = _CAP_WORD_PATTERN.findall(cap_str.lower())
+            if caps and path not in seen_cap_paths:
+                seen_cap_paths.add(path)
                 cap_entry = CapabilityEntry(path=path, capabilities=caps, cap_string=cap_str)
                 self.results.capabilities.append(cap_entry)
 
@@ -475,18 +494,18 @@ class LinPEASParser:
             # Parse id output: uid=1000(user) gid=1000(user) groups=...
             if "uid=" in line:
                 # Extract uid
-                uid_match = re.search(r'uid=(\d+)\(([^)]+)\)', line)
+                uid_match = _UID_PATTERN.search(line)
                 if uid_match:
                     self.results.current_uid = int(uid_match.group(1))
                     self.results.current_user = uid_match.group(2)
 
                 # Extract gid
-                gid_match = re.search(r'gid=(\d+)', line)
+                gid_match = _GID_PATTERN.search(line)
                 if gid_match:
                     self.results.current_gid = int(gid_match.group(1))
 
                 # Extract groups
-                groups_match = re.search(r'groups=(.+)$', line)
+                groups_match = _GROUPS_PATTERN.search(line)
                 if groups_match:
                     groups_str = groups_match.group(1)
                     # Parse groups like "1000(user),27(sudo),..."

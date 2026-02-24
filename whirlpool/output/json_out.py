@@ -19,8 +19,8 @@ from ..engine.ranker import Ranker
 class JSONOutput:
     """JSON output formatter."""
 
-    def __init__(self):
-        self.ranker = Ranker()
+    def __init__(self, ranker: Ranker | None = None):
+        self.ranker = ranker or Ranker()
 
     def generate(
         self,

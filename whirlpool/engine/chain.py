@@ -82,7 +82,7 @@ class ChainDetector:
                         chains.extend(chain)
                     else:
                         chains.append(chain)
-            except (AttributeError, TypeError) as e:
+            except (AttributeError, TypeError, IndexError, KeyError) as e:
                 # Skip detectors that don't apply to this result type
                 logging.getLogger(__name__).debug("Chain detector %s skipped: %s", detector.__name__, e)
                 continue
@@ -735,7 +735,7 @@ class ChainDetector:
         # Check for sudo entries that use relative paths (no leading /)
         # These are vulnerable to PATH hijacking
         for sudo in sudo_rights:
-            for cmd in getattr(sudo, 'commands', []):
+            for cmd in (getattr(sudo, 'commands', None) or []):
                 cmd = cmd.strip()
                 if cmd and cmd not in ('ALL', 'NOPASSWD') and not cmd.startswith('/') and not cmd.startswith('!'):
                     return AttackChain(

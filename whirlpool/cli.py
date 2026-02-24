@@ -40,7 +40,9 @@ def detect_input_type(content: str) -> str:
     if '_-_-_-_-_' in content:
         return 'winpeas'
     # WinPEAS .exe format uses ═══ with Windows-specific content
-    if '═══' in content and ('privileges information' in content_lower or 'token privileges' in content_lower):
+    if '═══' in content and ('privileges information' in content_lower or 'token privileges' in content_lower
+                             or 'hklm\\' in content_lower or 'c:\\windows' in content_lower
+                             or 'net user' in content_lower):
         return 'winpeas'
 
     # LinPEAS indicators - check for explicit name or distinctive section headers
@@ -138,27 +140,21 @@ def parse_input(input_arg: str, input_type: str | None = None):
 
 def list_techniques() -> None:
     """Print a summary of all knowledge base contents and exit."""
-    data_dir = Path(__file__).parent / 'data'
+    from .engine.analyzer import Analyzer
 
-    def load(filename: str) -> dict:
-        path = data_dir / filename
-        if not path.exists():
-            return {}
-        with path.open(encoding='utf-8') as f:
-            result: dict = json.load(f)
-            return result
+    analyzer = Analyzer()
 
-    gtfobins = load('gtfobins.json')
-    kernel = load('kernel_exploits.json')
-    potato = load('potato_matrix.json')
-    lolbas = load('lolbas.json')
-
-    gtfobins_count = len(gtfobins.get('binaries', {}))
-    kernel_linux_count = len(kernel.get('linux', {}))
-    kernel_windows_count = len(kernel.get('windows', {}))
-    potato_count = len(potato.get('attacks', {}))
-    lolbas_bin_count = len(lolbas.get('binaries', {}))
-    lolbas_script_count = len(lolbas.get('scripts', {}))
+    gtfobins_count = len(analyzer._gtfobins)
+    kernel_linux_count = len(analyzer._kernel_exploits.get('linux', {}))
+    kernel_windows_count = len(analyzer._kernel_exploits.get('windows', {}))
+    potato_count = len(analyzer._potato_matrix.get('attacks', {}))
+    # _lolbas is already the binaries dict; load scripts count from raw JSON
+    lolbas_bin_count = len(analyzer._lolbas)
+    lolbas_script_count = 0
+    lolbas_path = analyzer.data_dir / 'lolbas.json'
+    if lolbas_path.exists():
+        with lolbas_path.open(encoding='utf-8') as f:
+            lolbas_script_count = len(json.load(f).get('scripts', {}))
 
     print(f"Whirlpool Knowledge Base Summary (v{__version__})")
     print("=" * 50)
@@ -620,7 +616,7 @@ Examples:
         elif parsed_args.format == 'markdown':
             from .output.markdown import MarkdownOutput
 
-            md_output = MarkdownOutput()
+            md_output = MarkdownOutput(ranker=ranker)
             content = md_output.generate(paths, chains=chains, target_info=target_info)
 
             if parsed_args.output:
@@ -632,7 +628,7 @@ Examples:
         elif parsed_args.format == 'json':
             from .output.json_out import JSONOutput
 
-            json_output = JSONOutput()
+            json_output = JSONOutput(ranker=ranker)
             content = json_output.to_json(paths, chains=chains, target_info=target_info)
 
             if parsed_args.output:
@@ -648,13 +644,22 @@ Examples:
         return 130
     except (MemoryError, RecursionError):
         raise
+    except FileNotFoundError as e:
+        print(f"Error: File not found: {e}", file=sys.stderr)
+        return 1
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in data file: {e}", file=sys.stderr)
+        return 1
+    except UnicodeDecodeError as e:
+        print(f"Error: Cannot decode input file: {e}", file=sys.stderr)
+        return 1
     except Exception as e:
-        print(f"Error ({type(e).__name__}): {e}", file=sys.stderr)
-        if parsed_args.verbose:
-            import traceback
-            traceback.print_exc()
-        else:
-            print("Use --verbose for full traceback", file=sys.stderr)
+        import traceback
+        print(f"Unexpected error ({type(e).__name__}): {e}", file=sys.stderr)
+        traceback.print_exc()
         return 1
 
 
