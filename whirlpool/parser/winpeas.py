@@ -176,6 +176,7 @@ class WinPEASParser:
         file_size = path.stat().st_size
         if file_size > max_size:
             raise ValueError(f"File exceeds {max_size // (1024 * 1024)}MB limit ({file_size // (1024 * 1024)}MB)")
+
         for encoding in ['utf-8', 'utf-16', 'latin-1', 'cp1252']:
             try:
                 content = path.read_text(encoding=encoding)

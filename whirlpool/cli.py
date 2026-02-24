@@ -9,6 +9,7 @@ import argparse
 import json
 import re
 import sys
+import traceback
 from pathlib import Path
 
 from . import __version__
@@ -657,7 +658,6 @@ Examples:
         print(f"Error: Cannot decode input file: {e}", file=sys.stderr)
         return 1
     except Exception as e:
-        import traceback
         print(f"Unexpected error ({type(e).__name__}): {e}", file=sys.stderr)
         traceback.print_exc()
         return 1

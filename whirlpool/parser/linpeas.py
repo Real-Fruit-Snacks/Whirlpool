@@ -272,6 +272,7 @@ class LinPEASParser:
         file_size = path.stat().st_size
         if file_size > max_size:
             raise ValueError(f"File exceeds {max_size // (1024 * 1024)}MB limit ({file_size // (1024 * 1024)}MB)")
+
         # Try different encodings
         for encoding in ['utf-8', 'latin-1', 'cp1252']:
             try:
