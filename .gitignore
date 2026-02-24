@@ -39,13 +39,14 @@ Thumbs.db
 
 # AI tooling
 CLAUDE.md
+**/AGENTS.md
 .omc/
 .claude/
 
 # Development artifacts
 CODE_REVIEW*.md
 IMPROVEMENTS.md
-Look and Feel.png
+*.png
 
 # Linting cache
 .ruff_cache/
