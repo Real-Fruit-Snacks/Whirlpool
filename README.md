@@ -1,6 +1,12 @@
 <div align="center">
 
-<img src="docs/banner.svg" alt="Whirlpool" width="800">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/banner.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/banner-light.svg">
+  <img src="docs/banner.svg" alt="Whirlpool" width="800">
+</picture>
+
+<br><br>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Real-Fruit-Snacks/Whirlpool/blob/main/LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-green.svg)](https://python.org/)
@@ -8,9 +14,67 @@
 [![Tests](https://img.shields.io/badge/Tests-237%20passing-brightgreen.svg)](#testing)
 [![CI](https://github.com/Real-Fruit-Snacks/Whirlpool/actions/workflows/ci.yml/badge.svg)](https://github.com/Real-Fruit-Snacks/Whirlpool/actions/workflows/ci.yml)
 
+**Privilege escalation reasoning engine** -- parses LinPEAS/WinPEAS output and generates ranked exploitation playbooks.
+
+Feed it raw enumeration output, get back a prioritized attack plan with exact commands, confidence ratings, and multi-step attack chains. Everything runs offline -- no API calls, no internet required.
+
+[Getting Started](#quick-start) · [Features](#features) · [Knowledge Bases](#knowledge-bases) · [Ranking](#ranking-system) · [API](#python-api) · [Contributing](#contributing)
+
+</div>
+
 <br>
 
-Whirlpool is a CLI privilege escalation reasoning engine that parses enumeration output from LinPEAS, WinPEAS, and manual commands, matches findings against offline knowledge bases, and generates ranked, actionable exploitation playbooks. Feed it raw output, get back a prioritized attack plan.
+## Highlights
+
+<table>
+<tr>
+<td width="50%">
+
+### Auto-Detection
+Feed Whirlpool any enumeration file and it figures out the format. Handles LinPEAS `.sh` output (Unicode box headers), WinPEAS `.exe` output, `.bat` output (`_-_-_-_->` markers), `.exe` beta format (`[+]` sections), and manual command output -- all automatically.
+
+</td>
+<td width="50%">
+
+### Offline Knowledge Bases
+329 GTFOBins entries, 86 LOLBAS binaries, 42 kernel exploits with version ranges, and 9 potato attacks with OS compatibility matrices. Everything runs locally -- no API calls, no internet required.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### Composite Scoring
+Every technique gets a weighted score across four dimensions: reliability (40%), safety (30%), simplicity (20%), and stealth (10%). Five ranking profiles -- default, OSCP, CTF, stealth, safe -- shift the weights to match your scenario.
+
+</td>
+<td width="50%">
+
+### Attack Chain Detection
+Detects multi-step privilege escalation paths that single-finding scanners miss: cron PATH hijack, writable cron scripts, Docker/LXD escapes, NFS SUID planting, wildcard injection, LD_PRELOAD abuse, writable /etc/passwd, and more.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### Noise Filtering
+Purpose-built parsers with aggressive false-positive filtering. The sudo parser rejects grep artifacts, version-like patterns, and common non-runas words. Real-world tested against 22 HTB/Vulnhub LinPEAS and WinPEAS samples with zero crashes and zero blank results.
+
+</td>
+<td width="50%">
+
+### Multiple Output Formats
+Rich terminal output with Catppuccin Mocha theming, Markdown report generation for documentation, and structured JSON export for tool integration. Quick-wins mode surfaces the top 5 highest-probability techniques.
+
+</td>
+</tr>
+</table>
+
+---
+
+<details>
+<summary><strong>Demo Output</strong></summary>
 
 <br>
 
@@ -54,70 +118,7 @@ Profile:  DEFAULT   12 paths found | 6 high confidence | 9 low risk
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
-</div>
-
-<br>
-
-## Table of Contents
-
-- [Highlights](#highlights)
-- [Quick Start](#quick-start)
-- [Architecture](#architecture)
-- [Features](#features)
-- [Knowledge Bases](#knowledge-bases)
-- [Ranking System](#ranking-system)
-- [Python API](#python-api)
-- [Testing](#testing)
-- [Contributing](#contributing)
-
----
-
-## Highlights
-
-<table>
-<tr>
-<td width="50%">
-
-### Auto-Detection
-Feed Whirlpool any enumeration file and it figures out the format. Handles LinPEAS `.sh` output (Unicode box headers), WinPEAS `.exe` output, `.bat` output (`_-_-_-_->` markers), `.exe` beta format (`[+]` sections), and manual command output — all automatically.
-
-</td>
-<td width="50%">
-
-### Offline Knowledge Bases
-329 GTFOBins entries, 86 LOLBAS binaries, 42 kernel exploits with version ranges, and 9 potato attacks with OS compatibility matrices. Everything runs locally — no API calls, no internet required.
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### Composite Scoring
-Every technique gets a weighted score across four dimensions: reliability (40%), safety (30%), simplicity (20%), and stealth (10%). Five ranking profiles — default, OSCP, CTF, stealth, safe — shift the weights to match your scenario.
-
-</td>
-<td width="50%">
-
-### Attack Chain Detection
-Detects multi-step privilege escalation paths that single-finding scanners miss: cron PATH hijack, writable cron scripts, Docker/LXD escapes, NFS SUID planting, wildcard injection, LD_PRELOAD abuse, writable /etc/passwd, and more.
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### Noise Filtering
-Purpose-built parsers with aggressive false-positive filtering. The sudo parser rejects grep artifacts, version-like patterns, and common non-runas words. Real-world tested against 22 HTB/Vulnhub LinPEAS and WinPEAS samples with zero crashes and zero blank results.
-
-</td>
-<td width="50%">
-
-### Multiple Output Formats
-Rich terminal output with Catppuccin Mocha theming, Markdown report generation for documentation, and structured JSON export for tool integration. Quick-wins mode surfaces the top 5 highest-probability techniques.
-
-</td>
-</tr>
-</table>
+</details>
 
 ---
 
@@ -233,7 +234,7 @@ whirlpool [-h] [-t TYPE] [-f FORMAT] [-o OUTPUT] [-p PROFILE]
 
 ## Architecture
 
-Whirlpool follows a three-stage pipeline: **parse** enumeration output into structured data, **analyze** findings against knowledge bases to generate exploitation paths, and **rank** paths using a composite scoring system. No network calls, no subprocess execution, no eval — command strings are output as text for the operator, never executed.
+Whirlpool follows a three-stage pipeline: **parse** enumeration output into structured data, **analyze** findings against knowledge bases to generate exploitation paths, and **rank** paths using a composite scoring system. No network calls, no subprocess execution, no eval -- command strings are output as text for the operator, never executed.
 
 ```
 whirlpool/
@@ -293,7 +294,7 @@ whirlpool/
 
 | Feature | Description |
 |---------|-------------|
-| **Auto-detection** | Identifies input format from content — no `--type` flag needed |
+| **Auto-detection** | Identifies input format from content -- no `--type` flag needed |
 | **LinPEAS parsing** | SUID, SGID, capabilities, sudo, cron, NFS, Docker, kernel version, SSH keys |
 | **WinPEAS parsing** | Privileges, services, scheduled tasks, missing patches, user info, network |
 | **Sudo noise filtering** | Rejects grep artifacts, version patterns, and common false-positive words |
@@ -313,7 +314,7 @@ whirlpool/
 | **AD/Kerberos suggestions** | Kerberoasting, AS-REP Roasting, BloodHound enumeration for domain-joined hosts |
 | **Attack chain detection** | 12 multi-step chain types (PATH hijack, Docker escape, NFS plant, etc.) |
 | **Composite scoring** | Four-dimension weighted scoring (reliability, safety, simplicity, stealth) |
-| **5 ranking profiles** | Default, OSCP, CTF, stealth, safe — each shifts scoring weights |
+| **5 ranking profiles** | Default, OSCP, CTF, stealth, safe -- each shifts scoring weights |
 | **Quick wins** | Surfaces top 5 highest-probability techniques |
 | **Catppuccin Mocha theme** | Rich terminal output with semantic color mapping |
 | **Markdown reports** | Full analysis report with techniques, commands, and references |
@@ -380,10 +381,10 @@ Each exploitation path is scored across four dimensions, then combined with prof
 
 | Component | Default | OSCP | CTF | Stealth | Safe |
 |-----------|---------|------|-----|---------|------|
-| **Reliability** — likelihood of success | 40% | 50% | 50% | 25% | 30% |
-| **Safety** — system stability risk | 30% | 25% | 10% | 25% | 50% |
-| **Simplicity** — ease of execution | 20% | 20% | 35% | 10% | 15% |
-| **Stealth** — detection avoidance | 10% | 5% | 5% | 40% | 5% |
+| **Reliability** -- likelihood of success | 40% | 50% | 50% | 25% | 30% |
+| **Safety** -- system stability risk | 30% | 25% | 10% | 25% | 50% |
+| **Simplicity** -- ease of execution | 20% | 20% | 35% | 10% | 15% |
+| **Stealth** -- detection avoidance | 10% | 5% | 5% | 40% | 5% |
 
 Additional adjustments are applied based on:
 
@@ -397,9 +398,9 @@ Additional adjustments are applied based on:
 |---------|----------|
 | `default` | Balanced scoring for general use |
 | `oscp` | Prioritizes reliable, documented techniques for exam environments |
-| `ctf` | Prioritizes quick wins and speed — get root fast |
+| `ctf` | Prioritizes quick wins and speed -- get root fast |
 | `stealth` | Prioritizes low-detection techniques for red team ops |
-| `safe` | Prioritizes system stability — avoid crashing the target |
+| `safe` | Prioritizes system stability -- avoid crashing the target |
 
 ---
 
@@ -475,7 +476,7 @@ Tests cover parsers (LinPEAS, WinPEAS, manual Linux, manual Windows), the analys
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-feature`)
 3. Make your changes
-4. Run `python -m pytest tests/ -v` — all tests must pass
+4. Run `python -m pytest tests/ -v` -- all tests must pass
 5. Commit with a descriptive message
 6. Open a Pull Request
 
@@ -501,9 +502,9 @@ Tests cover parsers (LinPEAS, WinPEAS, manual Linux, manual Windows), the analys
 
 **Built for offense. Designed for clarity.**
 
-[GitHub](https://github.com/Real-Fruit-Snacks/Whirlpool) | [License (MIT)](LICENSE) | [Report Issue](https://github.com/Real-Fruit-Snacks/Whirlpool/issues)
+[GitHub](https://github.com/Real-Fruit-Snacks/Whirlpool) · [License (MIT)](LICENSE) · [Report Issue](https://github.com/Real-Fruit-Snacks/Whirlpool/issues)
 
-*Whirlpool — privilege escalation reasoning engine*
+*Whirlpool -- privilege escalation reasoning engine*
 
 </div>
 

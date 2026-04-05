@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="spiral-grad-light" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0d9488"/>
+      <stop offset="100%" style="stop-color:#16a34a"/>
+    </linearGradient>
+    <filter id="center-glow-light">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="arrow-glow-light">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Spiral: 2.5 turns winding inward, teal to green gradient -->
+  <path d="
+    M 60,12
+    A 48,48 0 0,1 108,60
+    A 48,48 0 0,1 60,108
+    A 48,48 0 0,1 12,60
+    A 48,48 0 0,1 60,22
+    A 38,38 0 0,1 98,60
+    A 38,38 0 0,1 60,98
+    A 38,38 0 0,1 22,60
+    A 38,38 0 0,1 60,32
+    A 28,28 0 0,1 88,60
+    A 28,28 0 0,1 60,88
+    A 28,28 0 0,1 32,60
+    A 28,28 0 0,1 60,42
+    A 18,18 0 0,1 78,60
+    A 18,18 0 0,1 60,78
+    A 18,18 0 0,1 42,60
+    A 18,18 0 0,1 60,52
+    A 8,8 0 0,1 68,60
+  " fill="none" stroke="url(#spiral-grad-light)" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Enumeration data dots along spiral path -->
+  <circle cx="84" cy="18" r="2" fill="#0d9488" opacity="0.7"/>
+  <circle cx="106" cy="44" r="1.5" fill="#0f9880" opacity="0.6"/>
+  <circle cx="104" cy="80" r="2" fill="#119c78" opacity="0.7"/>
+  <circle cx="76" cy="104" r="1.5" fill="#129e6e" opacity="0.6"/>
+  <circle cx="36" cy="100" r="2" fill="#13a066" opacity="0.7"/>
+  <circle cx="16" cy="72" r="1.5" fill="#14a25e" opacity="0.6"/>
+  <circle cx="20" cy="40" r="2" fill="#14a256" opacity="0.5"/>
+  <circle cx="48" cy="24" r="1.5" fill="#16a34a" opacity="0.5"/>
+  <circle cx="78" cy="34" r="1.5" fill="#139e60" opacity="0.5"/>
+  <circle cx="94" cy="70" r="2" fill="#119a70" opacity="0.5"/>
+
+  <!-- Center point: teal with glow -->
+  <circle cx="64" cy="60" r="4" fill="#0d9488" filter="url(#center-glow-light)"/>
+
+  <!-- Escape arrow breaking upward out of spiral center -->
+  <line x1="64" y1="60" x2="82" y2="18" stroke="#16a34a" stroke-width="3" stroke-linecap="round" filter="url(#arrow-glow-light)"/>
+  <polygon points="82,10 76,22 88,22" fill="#16a34a" filter="url(#arrow-glow-light)"/>
+</svg>

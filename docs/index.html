@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Whirlpool — Privilege Escalation Reasoning Engine</title>
-  <meta name="description" content="CLI privilege escalation reasoning engine. Parse LinPEAS, WinPEAS, and manual enumeration output into ranked, actionable exploitation playbooks with offline knowledge bases.">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8C%80%3C/text%3E%3C/svg%3E">
+  <meta name="description" content="Privilege escalation reasoning engine — parses LinPEAS/WinPEAS output and generates ranked exploitation playbooks with offline knowledge bases.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='1' x2='1' y2='0'%3E%3Cstop offset='0%25' stop-color='%2394e2d5'/%3E%3Cstop offset='100%25' stop-color='%23a6e3a1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M16 2a14 14 0 0 1 14 14 14 14 0 0 1-14 14A14 14 0 0 1 2 16 14 14 0 0 1 16 6a10 10 0 0 1 10 10 10 10 0 0 1-10 10A10 10 0 0 1 6 16a10 10 0 0 1 10-6 6 6 0 0 1 6 6' fill='none' stroke='url(%23g)' stroke-width='2'/%3E%3Cline x1='18' y1='16' x2='24' y2='4' stroke='%23a6e3a1' stroke-width='2.5'/%3E%3Cpolygon points='24,1 21,7 27,7' fill='%23a6e3a1'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <style>
     /* =========================================================
        WHIRLPOOL LANDING PAGE
-       Catppuccin Mocha palette — dark terminal aesthetic
+       Catppuccin Mocha palette — teal/green accent
        ========================================================= */
 
     *, *::before, *::after {
@@ -48,6 +48,9 @@
       --ctp-base: #1e1e2e;
       --ctp-mantle: #181825;
       --ctp-crust: #11111b;
+
+      --accent: var(--ctp-teal);
+      --accent2: var(--ctp-green);
     }
 
     html {
@@ -108,13 +111,13 @@
     }
 
     a {
-      color: var(--ctp-blue);
+      color: var(--accent);
       text-decoration: none;
       transition: color 0.2s;
     }
 
     a:hover {
-      color: var(--ctp-sapphire);
+      color: var(--accent2);
     }
 
     /* ---- Section titles ---- */
@@ -165,7 +168,7 @@
       box-shadow:
         0 0 0 1px var(--ctp-surface0),
         0 24px 80px -12px rgba(0, 0, 0, 0.6),
-        0 0 120px -40px rgba(137, 180, 250, 0.08);
+        0 0 120px -40px rgba(148, 226, 213, 0.08);
     }
 
     .hero-titlebar {
@@ -199,19 +202,9 @@
       padding: 48px 40px 56px;
     }
 
-    .hero-prompt {
-      font-size: 13px;
-      color: var(--ctp-overlay0);
-      margin-bottom: 24px;
-      letter-spacing: 0.02em;
-    }
-
-    .hero-prompt .prompt-symbol {
-      color: var(--ctp-green);
-    }
-
-    .hero-prompt .prompt-path {
-      color: var(--ctp-blue);
+    .hero-logo {
+      display: block;
+      margin: 0 auto 24px;
     }
 
     .hero-title {
@@ -222,22 +215,21 @@
       margin-bottom: 8px;
       background: linear-gradient(
         135deg,
-        var(--ctp-mauve) 0%,
-        var(--ctp-blue) 30%,
-        var(--ctp-sapphire) 60%,
+        var(--ctp-teal) 0%,
+        var(--ctp-green) 50%,
         var(--ctp-teal) 100%
       );
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      filter: drop-shadow(0 0 40px rgba(203, 166, 247, 0.2));
+      filter: drop-shadow(0 0 40px rgba(148, 226, 213, 0.2));
     }
 
     .hero-cursor {
       display: inline-block;
       width: 3px;
       height: 0.8em;
-      background: var(--ctp-green);
+      background: var(--accent2);
       margin-left: 4px;
       vertical-align: baseline;
       animation: blink 1s step-end infinite;
@@ -285,16 +277,16 @@
     }
 
     .btn-primary {
-      background: var(--ctp-mauve);
+      background: var(--accent);
       color: var(--ctp-crust);
-      border-color: var(--ctp-mauve);
+      border-color: var(--accent);
     }
 
     .btn-primary:hover {
-      background: var(--ctp-blue);
-      border-color: var(--ctp-blue);
+      background: var(--accent2);
+      border-color: var(--accent2);
       color: var(--ctp-crust);
-      box-shadow: 0 0 24px rgba(203, 166, 247, 0.25);
+      box-shadow: 0 0 24px rgba(148, 226, 213, 0.25);
     }
 
     .btn-ghost {
@@ -335,7 +327,7 @@
       left: 0;
       right: 0;
       height: 2px;
-      background: linear-gradient(90deg, transparent, var(--ctp-blue), transparent);
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
       opacity: 0;
       transition: opacity 0.3s;
     }
@@ -378,20 +370,20 @@
     }
 
     /* ---- Unique accent colors per card ---- */
-    .feature-card:nth-child(1):hover { border-color: var(--ctp-mauve); }
-    .feature-card:nth-child(1):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-mauve), transparent); }
+    .feature-card:nth-child(1):hover { border-color: var(--ctp-teal); }
+    .feature-card:nth-child(1):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-teal), transparent); }
 
     .feature-card:nth-child(2):hover { border-color: var(--ctp-green); }
     .feature-card:nth-child(2):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-green), transparent); }
 
-    .feature-card:nth-child(3):hover { border-color: var(--ctp-blue); }
-    .feature-card:nth-child(3):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-blue), transparent); }
+    .feature-card:nth-child(3):hover { border-color: var(--ctp-teal); }
+    .feature-card:nth-child(3):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-teal), transparent); }
 
     .feature-card:nth-child(4):hover { border-color: var(--ctp-peach); }
     .feature-card:nth-child(4):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-peach), transparent); }
 
-    .feature-card:nth-child(5):hover { border-color: var(--ctp-teal); }
-    .feature-card:nth-child(5):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-teal), transparent); }
+    .feature-card:nth-child(5):hover { border-color: var(--ctp-green); }
+    .feature-card:nth-child(5):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-green), transparent); }
 
     .feature-card:nth-child(6):hover { border-color: var(--ctp-yellow); }
     .feature-card:nth-child(6):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-yellow), transparent); }
@@ -399,8 +391,8 @@
     .feature-card:nth-child(7):hover { border-color: var(--ctp-red); }
     .feature-card:nth-child(7):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-red), transparent); }
 
-    .feature-card:nth-child(8):hover { border-color: var(--ctp-flamingo); }
-    .feature-card:nth-child(8):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-flamingo), transparent); }
+    .feature-card:nth-child(8):hover { border-color: var(--ctp-teal); }
+    .feature-card:nth-child(8):hover::before { background: linear-gradient(90deg, transparent, var(--ctp-teal), transparent); }
 
     /* =========================================================
        TERMINAL MOCKUP
@@ -417,7 +409,7 @@
       box-shadow:
         0 0 0 1px var(--ctp-surface0),
         0 32px 80px -16px rgba(0, 0, 0, 0.5),
-        0 0 160px -60px rgba(203, 166, 247, 0.06);
+        0 0 160px -60px rgba(148, 226, 213, 0.06);
       max-width: 900px;
       margin: 0 auto;
       text-align: left;
@@ -444,7 +436,7 @@
     }
 
     .mockup-banner {
-      border: 2px solid var(--ctp-mauve);
+      border: 2px solid var(--accent);
       border-radius: 4px;
       padding: 16px 24px;
       text-align: center;
@@ -454,7 +446,7 @@
     .mockup-banner h2 {
       font-size: 15px;
       font-weight: 700;
-      color: var(--ctp-mauve);
+      color: var(--accent);
       letter-spacing: 0.04em;
     }
 
@@ -535,7 +527,7 @@
       font-size: 12px;
       font-weight: 700;
       color: var(--ctp-crust);
-      background: var(--ctp-green);
+      background: var(--accent2);
       padding: 1px 8px;
       border-radius: 3px;
     }
@@ -554,13 +546,13 @@
     }
 
     .mockup-win-badge--conf {
-      color: var(--ctp-green);
-      border: 1px solid var(--ctp-green);
+      color: var(--accent2);
+      border: 1px solid var(--accent2);
     }
 
     .mockup-win-badge--risk {
-      color: var(--ctp-teal);
-      border: 1px solid var(--ctp-teal);
+      color: var(--accent);
+      border: 1px solid var(--accent);
     }
 
     .mockup-win-desc {
@@ -575,7 +567,7 @@
       border-radius: 4px;
       padding: 10px 14px;
       font-size: 12px;
-      color: var(--ctp-green);
+      color: var(--accent2);
       line-height: 1.7;
     }
 
@@ -642,7 +634,7 @@
       font-size: 12px;
       font-weight: 700;
       color: var(--ctp-crust);
-      background: var(--ctp-mauve);
+      background: var(--accent);
       width: 24px;
       height: 24px;
       display: flex;
@@ -652,7 +644,7 @@
       flex-shrink: 0;
     }
 
-    .arch-item:nth-child(2) .arch-item-marker { background: var(--ctp-green); }
+    .arch-item:nth-child(2) .arch-item-marker { background: var(--accent2); }
     .arch-item:nth-child(3) .arch-item-marker { background: var(--ctp-peach); }
     .arch-item:nth-child(4) .arch-item-marker { background: var(--ctp-red); }
 
@@ -670,7 +662,7 @@
 
     .arch-item code {
       font-size: 12px;
-      color: var(--ctp-mauve);
+      color: var(--accent);
       background: var(--ctp-surface0);
       padding: 1px 6px;
       border-radius: 3px;
@@ -731,10 +723,10 @@
       margin-bottom: 8px;
     }
 
-    .kb-card:nth-child(1) .kb-number { color: var(--ctp-green); }
+    .kb-card:nth-child(1) .kb-number { color: var(--accent2); }
     .kb-card:nth-child(2) .kb-number { color: var(--ctp-peach); }
     .kb-card:nth-child(3) .kb-number { color: var(--ctp-red); }
-    .kb-card:nth-child(4) .kb-number { color: var(--ctp-blue); }
+    .kb-card:nth-child(4) .kb-number { color: var(--accent); }
 
     .kb-label {
       font-size: 13px;
@@ -797,7 +789,7 @@
     }
 
     .ranking-table .highlight {
-      color: var(--ctp-green);
+      color: var(--accent2);
       font-weight: 600;
     }
 
@@ -847,7 +839,7 @@
     }
 
     .start-line .prompt {
-      color: var(--ctp-green);
+      color: var(--accent2);
       user-select: none;
     }
 
@@ -921,7 +913,7 @@
     }
 
     .footer-links a:hover {
-      color: var(--ctp-blue);
+      color: var(--accent);
     }
 
     .footer-copy {
@@ -1007,14 +999,14 @@
 
     /* ---- Selection highlight ---- */
     ::selection {
-      background: rgba(203, 166, 247, 0.25);
+      background: rgba(148, 226, 213, 0.25);
       color: var(--ctp-text);
     }
 
     /* ---- Focus styles for accessibility ---- */
     a:focus-visible,
     .btn:focus-visible {
-      outline: 2px solid var(--ctp-mauve);
+      outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
   </style>
@@ -1033,6 +1025,30 @@
         <span class="hero-titlebar-text">whirlpool -- privesc reasoning engine</span>
       </div>
       <div class="hero-body">
+        <!-- Inline Spiral Escape logomark -->
+        <svg class="hero-logo" width="72" height="72" viewBox="0 0 120 120" aria-hidden="true">
+          <defs>
+            <linearGradient id="hl-spiral" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#94e2d5"/>
+              <stop offset="100%" style="stop-color:#a6e3a1"/>
+            </linearGradient>
+            <filter id="hl-glow">
+              <feGaussianBlur stdDeviation="2.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path d="M60,12 A48,48 0 0,1 108,60 A48,48 0 0,1 60,108 A48,48 0 0,1 12,60 A48,48 0 0,1 60,22 A38,38 0 0,1 98,60 A38,38 0 0,1 60,98 A38,38 0 0,1 22,60 A38,38 0 0,1 60,32 A28,28 0 0,1 88,60 A28,28 0 0,1 60,88 A28,28 0 0,1 32,60 A28,28 0 0,1 60,42 A18,18 0 0,1 78,60 A18,18 0 0,1 60,78 A18,18 0 0,1 42,60 A18,18 0 0,1 60,52 A8,8 0 0,1 68,60" fill="none" stroke="url(#hl-spiral)" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="84" cy="18" r="2" fill="#94e2d5" opacity="0.7"/>
+          <circle cx="106" cy="44" r="1.5" fill="#9ae0cd" opacity="0.6"/>
+          <circle cx="104" cy="80" r="2" fill="#9edec5" opacity="0.7"/>
+          <circle cx="36" cy="100" r="2" fill="#a2dcbd" opacity="0.7"/>
+          <circle cx="16" cy="72" r="1.5" fill="#a0dabb" opacity="0.6"/>
+          <circle cx="48" cy="24" r="1.5" fill="#a6e3a1" opacity="0.5"/>
+          <circle cx="64" cy="60" r="4" fill="#94e2d5" filter="url(#hl-glow)"/>
+          <line x1="64" y1="60" x2="82" y2="18" stroke="#a6e3a1" stroke-width="3" stroke-linecap="round" filter="url(#hl-glow)"/>
+          <polygon points="82,10 76,22 88,22" fill="#a6e3a1" filter="url(#hl-glow)"/>
+        </svg>
+
         <h1 class="hero-title">Whirlpool<span class="hero-cursor" aria-hidden="true"></span></h1>
         <p class="hero-tagline">
           <em>Privilege escalation reasoning engine</em><br>
@@ -1058,7 +1074,7 @@
       <div class="feature-card">
         <span class="feature-icon" aria-hidden="true">&#9881;</span>
         <h3>Auto-Detection</h3>
-        <p>Identifies LinPEAS .sh, WinPEAS .exe/.bat/.beta, and manual command output automatically. No <code style="font-size:12px;color:var(--ctp-mauve);background:var(--ctp-surface0);padding:1px 5px;border-radius:3px;">--type</code> flag needed.</p>
+        <p>Identifies LinPEAS .sh, WinPEAS .exe/.bat/.beta, and manual command output automatically. No <code style="font-size:12px;color:var(--accent);background:var(--ctp-surface0);padding:1px 5px;border-radius:3px;">--type</code> flag needed.</p>
       </div>
 
       <div class="feature-card">
@@ -1094,7 +1110,7 @@
       <div class="feature-card">
         <span class="feature-icon" aria-hidden="true">&#9733;</span>
         <h3>Quick Wins</h3>
-        <p>Surface the top 5 highest-probability techniques instantly. One flag: <code style="font-size:12px;color:var(--ctp-mauve);background:var(--ctp-surface0);padding:1px 5px;border-radius:3px;">--quick-wins</code></p>
+        <p>Surface the top 5 highest-probability techniques instantly. One flag: <code style="font-size:12px;color:var(--accent);background:var(--ctp-surface0);padding:1px 5px;border-radius:3px;">--quick-wins</code></p>
       </div>
 
       <div class="feature-card">
@@ -1388,7 +1404,7 @@
 
       <div class="start-info">
       <p>
-        <strong style="color:var(--ctp-text);">pipx</strong> is the recommended install method -- it creates an isolated environment and keeps your system Python clean. <a href="https://pipx.pypa.io/" style="color:var(--ctp-blue);">Install pipx</a> if you don't have it yet.
+        <strong style="color:var(--ctp-text);">pipx</strong> is the recommended install method -- it creates an isolated environment and keeps your system Python clean. <a href="https://pipx.pypa.io/" style="color:var(--accent);">Install pipx</a> if you don't have it yet.
       </p>
       <p>
         Point Whirlpool at any enumeration output file. It auto-detects the format, parses the findings, matches them against offline knowledge bases, and outputs a ranked exploitation playbook.

@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="280" viewBox="0 0 800 280">
+  <defs>
+    <linearGradient id="bg-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f8f9fc"/>
+      <stop offset="50%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#f1f3f8"/>
+    </linearGradient>
+    <linearGradient id="title-grad-light" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0d9488"/>
+      <stop offset="50%" style="stop-color:#16a34a"/>
+      <stop offset="100%" style="stop-color:#0d9488"/>
+    </linearGradient>
+    <linearGradient id="spiral-grad-light" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0d9488"/>
+      <stop offset="100%" style="stop-color:#16a34a"/>
+    </linearGradient>
+    <linearGradient id="accent-line-light" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0d9488;stop-opacity:0"/>
+      <stop offset="20%" style="stop-color:#0d9488"/>
+      <stop offset="50%" style="stop-color:#16a34a"/>
+      <stop offset="80%" style="stop-color:#0d9488"/>
+      <stop offset="100%" style="stop-color:#0d9488;stop-opacity:0"/>
+    </linearGradient>
+    <filter id="glow-light">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="logo-glow-light">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="280" rx="12" fill="url(#bg-light)"/>
+
+  <!-- Subtle border -->
+  <rect width="800" height="280" rx="12" fill="none" stroke="#d4d8e4" stroke-width="1"/>
+
+  <!-- Decorative spiral motif (top-right) -->
+  <g opacity="0.08" transform="translate(680, 90)">
+    <path d="
+      M 0,-50
+      A 50,50 0 0,1 50,0
+      A 50,50 0 0,1 0,50
+      A 50,50 0 0,1 -50,0
+      A 50,50 0 0,1 0,-40
+      A 40,40 0 0,1 40,0
+      A 40,40 0 0,1 0,40
+      A 40,40 0 0,1 -40,0
+      A 40,40 0 0,1 0,-30
+      A 30,30 0 0,1 30,0
+      A 30,30 0 0,1 0,30
+      A 30,30 0 0,1 -30,0
+      A 30,30 0 0,1 0,-20
+      A 20,20 0 0,1 20,0
+    " fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round"/>
+    <line x1="0" y1="0" x2="20" y2="-40" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="20,-48 15,-38 25,-38" fill="#16a34a"/>
+  </g>
+
+  <!-- Decorative spiral motif (bottom-left) -->
+  <g opacity="0.05" transform="translate(100, 220)">
+    <path d="
+      M 0,-35
+      A 35,35 0 0,1 35,0
+      A 35,35 0 0,1 0,35
+      A 35,35 0 0,1 -35,0
+      A 35,35 0 0,1 0,-25
+      A 25,25 0 0,1 25,0
+      A 25,25 0 0,1 0,25
+      A 25,25 0 0,1 -25,0
+      A 25,25 0 0,1 0,-15
+      A 15,15 0 0,1 15,0
+    " fill="none" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Decorative dots -->
+  <g opacity="0.1">
+    <circle cx="60" cy="45" r="1.5" fill="#0d9488"/>
+    <circle cx="80" cy="40" r="1" fill="#16a34a"/>
+    <circle cx="100" cy="50" r="1.5" fill="#0d9488"/>
+    <circle cx="75" cy="60" r="1" fill="#16a34a"/>
+    <circle cx="95" cy="33" r="1" fill="#0d9488"/>
+    <circle cx="115" cy="43" r="1.5" fill="#16a34a"/>
+    <circle cx="40" cy="53" r="1" fill="#0d9488"/>
+    <circle cx="120" cy="57" r="1" fill="#16a34a"/>
+    <circle cx="50" cy="35" r="1.5" fill="#0d9488"/>
+    <circle cx="130" cy="37" r="1" fill="#16a34a"/>
+    <circle cx="710" cy="215" r="1.5" fill="#0d9488"/>
+    <circle cx="690" cy="225" r="1" fill="#16a34a"/>
+    <circle cx="730" cy="230" r="1.5" fill="#0d9488"/>
+    <circle cx="705" cy="240" r="1" fill="#16a34a"/>
+    <circle cx="675" cy="220" r="1" fill="#0d9488"/>
+    <circle cx="740" cy="220" r="1" fill="#16a34a"/>
+  </g>
+
+  <!-- Inline Spiral Escape logomark -->
+  <g transform="translate(185, 88)" filter="url(#logo-glow-light)">
+    <path d="
+      M 0,-22
+      A 22,22 0 0,1 22,0
+      A 22,22 0 0,1 0,22
+      A 22,22 0 0,1 -22,0
+      A 22,22 0 0,1 0,-16
+      A 16,16 0 0,1 16,0
+      A 16,16 0 0,1 0,16
+      A 16,16 0 0,1 -16,0
+      A 16,16 0 0,1 0,-10
+      A 10,10 0 0,1 10,0
+      A 10,10 0 0,1 0,10
+      A 10,10 0 0,1 -10,0
+      A 10,10 0 0,1 0,-5
+      A 5,5 0 0,1 5,0
+    " fill="none" stroke="url(#spiral-grad-light)" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="2" cy="0" r="3" fill="#0d9488"/>
+    <line x1="2" y1="0" x2="12" y2="-20" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="12,-26 8,-18 16,-18" fill="#16a34a"/>
+    <circle cx="16" cy="14" r="1.5" fill="#0d9488" opacity="0.6"/>
+    <circle cx="-18" cy="-8" r="1.5" fill="#16a34a" opacity="0.5"/>
+    <circle cx="8" cy="20" r="1" fill="#0d9488" opacity="0.5"/>
+  </g>
+
+  <!-- Title -->
+  <text x="430" y="130" font-family="'SF Mono','Fira Code','JetBrains Mono','Cascadia Code',Consolas,monospace"
+        font-size="62" font-weight="bold" fill="url(#title-grad-light)" text-anchor="middle"
+        letter-spacing="8" filter="url(#glow-light)">WHIRLPOOL</text>
+
+  <!-- Accent line under title -->
+  <rect x="200" y="148" width="460" height="2" rx="1" fill="url(#accent-line-light)"/>
+
+  <!-- Subtitle -->
+  <text x="430" y="178" font-family="'SF Mono','Fira Code','JetBrains Mono','Cascadia Code',Consolas,monospace"
+        font-size="13" fill="#64748b" text-anchor="middle"
+        letter-spacing="4">PRIVESC REASONING ENGINE</text>
+
+  <!-- Tech line -->
+  <text x="430" y="202" font-family="'SF Mono','Fira Code','JetBrains Mono','Cascadia Code',Consolas,monospace"
+        font-size="10" fill="#94a3b8" text-anchor="middle"
+        letter-spacing="3">PYTHON · LINPEAS · WINPEAS · PLAYBOOKS</text>
+
+  <!-- Feature badges -->
+  <g transform="translate(110, 220)">
+    <rect x="0" y="0" width="140" height="28" rx="14" fill="#f1f5f9"/>
+    <rect x="0" y="0" width="140" height="28" rx="14" fill="none" stroke="#d4d8e4" stroke-width="0.5"/>
+    <circle cx="18" cy="14" r="4" fill="#16a34a"/>
+    <text x="30" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#334155">offline analysis</text>
+
+    <rect x="160" y="0" width="130" height="28" rx="14" fill="#f1f5f9"/>
+    <rect x="160" y="0" width="130" height="28" rx="14" fill="none" stroke="#d4d8e4" stroke-width="0.5"/>
+    <circle cx="178" cy="14" r="4" fill="#0d9488"/>
+    <text x="190" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#334155">score ranking</text>
+
+    <rect x="310" y="0" width="130" height="28" rx="14" fill="#f1f5f9"/>
+    <rect x="310" y="0" width="130" height="28" rx="14" fill="none" stroke="#d4d8e4" stroke-width="0.5"/>
+    <circle cx="328" cy="14" r="4" fill="#dc2626"/>
+    <text x="340" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#334155">attack chains</text>
+
+    <rect x="460" y="0" width="130" height="28" rx="14" fill="#f1f5f9"/>
+    <rect x="460" y="0" width="130" height="28" rx="14" fill="none" stroke="#d4d8e4" stroke-width="0.5"/>
+    <circle cx="478" cy="14" r="4" fill="#16a34a"/>
+    <text x="490" y="18" font-family="'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace"
+          font-size="11" fill="#334155">multi-format</text>
+  </g>
+</svg>
